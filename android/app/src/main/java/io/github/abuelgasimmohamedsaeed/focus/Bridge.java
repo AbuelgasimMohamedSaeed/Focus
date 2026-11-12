@@ -33,6 +33,12 @@ final class Bridge {
         return Backups.newest(app);
     }
 
+    /** The page's background color, so the status-bar area matches it (white when a Dhikr goal is reached). */
+    @JavascriptInterface
+    public void barColor(String hex) {
+        activity.runOnUiThread(() -> activity.barColor(hex));
+    }
+
     @JavascriptInterface
     public String version() {
         return activity.versionName();

@@ -581,6 +581,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 
 <script>
 (() => {
+  // In the Android app, the native side (live line, bells while Focus is closed, backups) is reached through FocusAndroid
+  if (!window.stillNative && window.FocusAndroid) window.stillNative = {
+    android: true,
+    sitState: s => FocusAndroid.sitState(s ? JSON.stringify(s) : 'null'),
+    saveBackup: json => FocusAndroid.saveBackup(json),
+    findBackup: async () => { const j = FocusAndroid.findBackup(); return j ? { json: j } : null; }
+  };
+  const ANDROID = !!(window.stillNative && window.stillNative.android);
   const KEY = 'still.v1', STEP = 16, MIN = 5, MAX = 180;
   const $ = id => document.getElementById(id);
   const blank = { pick: 120, goal: 120, start: null, sessions: [], urges: {}, running: null };
@@ -614,7 +622,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const r = S.running;
     let color = '';
     try { color = r && r.label ? labelColor(r.label, false) : ''; } catch (e) {}
-    const st = r ? JSON.stringify({ endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over, color }) : 'null';
+    let sound = 'ring';
+    try { sound = soundName(); } catch (e) {}
+    const st = r ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over,
+      color, up: !!r.up, sound, interval: S.interval || 0 }) : 'null';
     if (st === lastSit) return;
     lastSit = st;
     try { window.stillNative.sitState(JSON.parse(st)); } catch (e) {}
@@ -678,7 +689,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('log').innerHTML = recent.length ? recent.map(s => {
       const d = new Date(s.start), [n, unit] = durParts(s.min);
       return '<li><span>' + d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
-        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + (s.label ? ' · ' + dotHtml(s.label) + esc(s.label) : '') +
+        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) + (s.label ? ' · ' + dotHtml(s.label) + esc(s.label) : '') +
         '</span><span class="dz-r"><span>' + n + ' ' + unit + '</span><button class="del" data-start="' + s.start + '">Delete</button></span></li>';
     }).join('') : '<li class="empty">No sits yet. Each one you finish shows up here.</li>';
   }
@@ -686,7 +697,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   // ---- charts
   const dayName = k => kdate(k).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const shortDate = k => kdate(k).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  const tickMin = v => v < 60 ? v + 'm' : (v % 60 ? (v / 60).toFixed(1) : v / 60) + 'h';
+  const tickMin = v => v < 60 ? v + 'm' : Math.floor(v / 60) + 'h' + (v % 60 ? ' ' + (v % 60) + 'm' : '');
   const tickHr = v => (Number.isInteger(v) ? v : v.toFixed(1)) + 'h';
 
   function hover(el, n, pick, show) {
@@ -955,6 +966,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   // ---- keep screen awake
   let lock = null;
   async function keepAwake() {
+    if (ANDROID) { $('runWarn').hidden = true; return; } // the Android app keeps the screen on itself
     try {
       if ('wakeLock' in navigator) { lock = await navigator.wakeLock.request('screen'); $('runWarn').hidden = true; return; }
     } catch (e) {}
@@ -994,34 +1006,38 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('run').hidden = false;
     keepAwake(); tick(); wake();
   }
-  function timesUp() {
+  function timesUp(loud) {
     overUI(true); wake(); replay($('clock'), 'pop');
+    if (!loud) return; // Focus was in the background and Android already rang the bell
     const s = soundName(), rep = BELLS[s] ? BELLS[s].repeat : [0, 4500];
     rep.forEach((ms, i) => setTimeout(() => bell(i ? .7 : 1), ms));
     try { if (navigator.vibrate) navigator.vibrate([400, 200, 400]); } catch (e) {}
   }
+  let lastTick = 0;
   function tick() {
     const r = S.running;
     if (!r) return;
     const now = Date.now();
+    const late = ANDROID && now - lastTick > 1500; // back from the background, where Android rang the bells itself
+    lastTick = now;
     if (now < r.startAt) { // 10-second settle
       const sv = fmtClock(Math.ceil((r.startAt - now) / 1000));
       if ($('clock').textContent !== sv) { $('clock').textContent = sv; replay($('clock'), 'pop'); }
       $('runSub').textContent = 'Get settled · the bell starts your sit';
       return;
     }
-    if (!r.begun) { r.begun = true; save(); overUI(!!r.over); bell(.45); }
+    if (!r.begun) { r.begun = true; save(); overUI(!!r.over); if (!late) bell(.45); }
     const left = r.endAt - now;
     if (left > 0) {
       const iv = (S.interval || 0) * 60000;
       if (iv) {
         const k = Math.floor((now - r.startAt) / iv);
-        if (k > (r.iv || 0)) { r.iv = k; save(); if (left > 20000) bell(.4); }
+        if (k > (r.iv || 0)) { r.iv = k; save(); if (left > 20000 && !late) bell(.4); }
       }
       $('clock').textContent = r.up ? fmtClock(Math.floor((now - r.startAt) / 1000)) : fmtClock(Math.ceil(left / 1000));
       return;
     }
-    if (!r.over) { r.over = true; save(); timesUp(); paintAdj(); }
+    if (!r.over) { r.over = true; save(); timesUp(!late); paintAdj(); }
     $('clock').textContent = r.up ? fmtClock(Math.floor((now - r.startAt) / 1000)) : '+' + fmtClock(Math.floor((now - r.endAt) / 1000));
     $('runSub').textContent = overSub(r);
   }
@@ -1223,14 +1239,16 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   const DZ = S.dhikr;
   $('dzRing').style.strokeDasharray = RING;
   const dzDate = t => new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
-    new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
   function paintDhikr() {
     const c = DZ.cur, k = dkey(Date.now());
     $('dzSet').hidden = !!c; $('counter').hidden = !c; $('dzCtl').hidden = !c;
     if (c) {
       const done = c.count >= c.goal;
-      $('dzNum').textContent = c.count;
-      $('dzOf').textContent = done ? 'Goal reached · keep going or Start fresh' : 'of ' + c.goal;
+      const extra = c.count - c.goal; // past the goal, the big number shows the extra count: +1, +2…
+      $('dzNum').textContent = extra > 0 ? '+' + extra : c.count;
+      $('dzOf').textContent = !done ? 'of ' + c.goal
+        : extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : 'Goal reached · keep going or Start fresh';
       $('dzRing').style.strokeDashoffset = RING * (1 - Math.min(1, c.count / c.goal));
       $('counter').classList.toggle('done', done);
       $('dzHint').textContent = 'Tap anywhere above the tabs, or press the space bar. Start fresh saves this session to History.';
@@ -1242,6 +1260,17 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const sessions = todays.length + (c ? 1 : 0);
     $('dzToday').textContent = 'Today ' + n + ' counted · ' + sessions + (sessions === 1 ? ' session' : ' sessions');
     paintHist();
+    paintHit();
+  }
+  // White screen while a Dhikr goal is reached and the Dhikr tab is open
+  function paintHit() {
+    const c = DZ.cur, hit = !!c && c.count >= c.goal && !$('dhikr').hidden;
+    if (document.body.classList.contains('dz-hit') === hit) return;
+    document.body.classList.toggle('dz-hit', hit);
+    const col = hit ? '#eceae4' : '#09090b';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', col);
+    try { if (window.FocusAndroid && FocusAndroid.barColor) FocusAndroid.barColor(col); } catch (e) {}
   }
   let histSig = '';
   function paintHist() {
@@ -1265,6 +1294,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       replay($('counter'), 'burst');
       ensureAudio(); bell(.4);
       try { if (navigator.vibrate) navigator.vibrate(200); } catch (e) {}
+    } else if (c.count > c.goal - 10 && c.count < c.goal) { // the last 10 before the goal: a short tap you can feel
+      try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
     }
     save(); paintDhikr();
     replay($('dzNum'), 'bump');
@@ -1336,6 +1367,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('bkMsg').textContent = 'Your progress lives on this device only.';
   }
   $('bkSave').addEventListener('click', () => {
+    if (ANDROID) { // a download link does nothing inside the app, so the app saves the file itself
+      window.stillNative.saveBackup(JSON.stringify({ app: 'Focus', version: 1, savedAt: new Date().toISOString(), data: S }));
+      $('bkMsg').textContent = 'Backup saved to Download \u203a Focus backups.';
+      return;
+    }
     const json = JSON.stringify({ app: 'Focus', version: 1, savedAt: new Date().toISOString(), data: S }, null, 2);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -1476,6 +1512,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (t === 'sit') requestAnimationFrame(sizeRuler);
     if (t === 'progress') requestAnimationFrame(() => drawCharts());
     if (t === 'dhikr' && !S.dhikr.cur) requestAnimationFrame(() => $('dzGoalIn').focus());
+    paintHit();
   }
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -1554,8 +1591,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         '<button data-act="plus">+ 5</button>' + (S.running.over ? '<button class="primary" data-act="done">Done</button>' : '');
     } else if (m === 'dhikr') {
       const c = S.dhikr.cur;
-      label = 'Dhikr'; big = String(c.count);
-      sub = (c.count >= c.goal ? 'Goal reached · ' : '') + 'of ' + c.goal + ' · click anywhere to count';
+      const extra = c.count - c.goal;
+      label = 'Dhikr'; big = extra > 0 ? '+' + extra : String(c.count);
+      sub = (extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : (extra === 0 ? 'Goal reached · ' : '') + 'of ' + c.goal) +
+        ' · click anywhere to count';
       row = '<button data-act="undo">Undo 1</button>';
     } else {
       const [n, u] = durParts(S.pick);
@@ -1670,7 +1709,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
     }
   }
-  if (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches) $('miniBtn').hidden = true;
+  if (ANDROID || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
   $('miniBtn').addEventListener('click', () => {
     if (window.stillNative) nativeMini(true);
     else if ('documentPictureInPicture' in window) openMini(true);
@@ -1691,7 +1730,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   syncSit();
   (async () => {
     if (!window.stillNative) return;
-    $('bkMsg').textContent = 'Backed up automatically to Documents \u203a Focus backups (last 30 days kept).';
+    $('bkMsg').textContent = 'Backed up automatically to ' + (ANDROID ? 'Download' : 'Documents') + ' \u203a Focus backups (last 30 days kept).';
     const empty = S.sessions.length === 0 && !((S.dhikr && S.dhikr.log) || []).length;
     let found = null;
     if (empty) { try { found = await window.stillNative.findBackup(); } catch (e) {} }
@@ -1712,5 +1751,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 })();
 </script>
 
+<script>
+  // offline support + updates: the browser keeps a copy and refreshes it whenever you're online
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
 </body>
 </html>

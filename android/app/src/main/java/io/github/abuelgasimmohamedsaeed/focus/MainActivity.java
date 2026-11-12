@@ -7,6 +7,7 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
@@ -138,6 +139,21 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (custom != null) exitFullScreen();
         else moveTaskToBack(true); // keep Focus as it is, like Home
+    }
+
+    void barColor(String hex) {
+        int color;
+        try {
+            color = Color.parseColor(hex);
+        } catch (Exception e) {
+            return;
+        }
+        root.setBackgroundColor(color);
+        WindowInsetsController bars = getWindow().getInsetsController();
+        if (bars != null) {
+            int dark = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+            bars.setSystemBarsAppearance(Color.luminance(color) > .5f ? dark : 0, dark); // dark icons on a light background
+        }
     }
 
     void keepScreenOn(boolean on) {

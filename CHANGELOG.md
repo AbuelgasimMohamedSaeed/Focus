@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 (2026-11-13)
+- Dhikr: the last 10 taps before your goal vibrate; the goal itself gives a longer buzz.
+- Dhikr: reaching the goal turns the whole screen white until Start fresh; extra counts show big as +1, +2… with the goal and total underneath.
+- History times in 12-hour format (9:13 PM).
+- Phones: the Sit screen no longer slides sideways; the bell choices wrap to fit.
+- Android app: the status-bar area turns white with the screen.
+
 ## Android app 1.0 (2026-11-12)
 - Focus as a real Android app: live countdown in the notifications and on the lock screen (status-bar chip on Android 16).
 - Start, interval and end bells ring in your chosen sound even when Focus is closed or the screen is off.

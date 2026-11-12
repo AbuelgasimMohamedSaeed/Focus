@@ -53,7 +53,7 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
   height:100%;max-width:460px;margin:0 auto;display:flex;flex-direction:column;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
 }
-.screen{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding-block:22px 14px;scrollbar-width:none}
+.screen{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;padding-block:22px 14px;scrollbar-width:none}
 .screen::-webkit-scrollbar{display:none}
 .screen > *{flex-shrink:0}
 
@@ -164,6 +164,7 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .seg button{flex:1;height:38px;border-radius:999px;border:1px solid var(--faint);background:none;color:var(--muted);font:500 13px var(--mono)}
 .seg button[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--pill-fg)}
 .sound{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:14px;font-size:12px;color:var(--muted)}
+.seg.small{flex-wrap:wrap;justify-content:center}
 .seg.small button{flex:0 0 auto;height:30px;padding:0 12px;font-size:12px}
 .log{list-style:none;margin:0;padding:0}
 .log li{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -192,6 +193,12 @@ button.wisdom:hover{border-color:var(--faint)}
 .counter .of{font-size:13px;color:var(--muted);padding:0 18px;text-align:center}
 .counter.done .face{background:var(--fg);color:var(--pill-fg)}
 .counter.done .of{color:var(--pill-fg)}
+/* Dhikr goal reached: the whole screen turns white until Start fresh */
+body{transition:background-color .5s}
+body.dz-hit{--bg:#eceae4;--fg:#0b0b0d;--muted:#55555c;--faint:#b9b8b2;--line:#d6d5cf;--card:#e4e3dd;--pill-fg:#eceae4;
+  --dot:rgba(11,11,13,.07);--under:#8a8a90;color-scheme:light}
+body.dz-hit .counter.done .face{background:transparent;color:var(--fg);border-color:var(--faint)}
+body.dz-hit .counter.done .of{color:var(--muted)}
 .dz-row{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
 .mini{height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:none;font-size:13px;font-weight:500}
 .dz-r{display:flex;align-items:center;gap:12px}
@@ -695,7 +702,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('log').innerHTML = recent.length ? recent.map(s => {
       const d = new Date(s.start), [n, unit] = durParts(s.min);
       return '<li><span>' + d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
-        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + (s.label ? ' · ' + dotHtml(s.label) + esc(s.label) : '') +
+        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) + (s.label ? ' · ' + dotHtml(s.label) + esc(s.label) : '') +
         '</span><span class="dz-r"><span>' + n + ' ' + unit + '</span><button class="del" data-start="' + s.start + '">Delete</button></span></li>';
     }).join('') : '<li class="empty">No sits yet. Each one you finish shows up here.</li>';
   }
@@ -1245,14 +1252,16 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   const DZ = S.dhikr;
   $('dzRing').style.strokeDasharray = RING;
   const dzDate = t => new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
-    new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
   function paintDhikr() {
     const c = DZ.cur, k = dkey(Date.now());
     $('dzSet').hidden = !!c; $('counter').hidden = !c; $('dzCtl').hidden = !c;
     if (c) {
       const done = c.count >= c.goal;
-      $('dzNum').textContent = c.count;
-      $('dzOf').textContent = done ? 'Goal reached · keep going or Start fresh' : 'of ' + c.goal;
+      const extra = c.count - c.goal; // past the goal, the big number shows the extra count: +1, +2…
+      $('dzNum').textContent = extra > 0 ? '+' + extra : c.count;
+      $('dzOf').textContent = !done ? 'of ' + c.goal
+        : extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : 'Goal reached · keep going or Start fresh';
       $('dzRing').style.strokeDashoffset = RING * (1 - Math.min(1, c.count / c.goal));
       $('counter').classList.toggle('done', done);
       $('dzHint').textContent = 'Tap anywhere above the tabs, or press the space bar. Start fresh saves this session to History.';
@@ -1264,6 +1273,17 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const sessions = todays.length + (c ? 1 : 0);
     $('dzToday').textContent = 'Today ' + n + ' counted · ' + sessions + (sessions === 1 ? ' session' : ' sessions');
     paintHist();
+    paintHit();
+  }
+  // White screen while a Dhikr goal is reached and the Dhikr tab is open
+  function paintHit() {
+    const c = DZ.cur, hit = !!c && c.count >= c.goal && !$('dhikr').hidden;
+    if (document.body.classList.contains('dz-hit') === hit) return;
+    document.body.classList.toggle('dz-hit', hit);
+    const col = hit ? '#eceae4' : '#09090b';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', col);
+    try { if (window.FocusAndroid && FocusAndroid.barColor) FocusAndroid.barColor(col); } catch (e) {}
   }
   let histSig = '';
   function paintHist() {
@@ -1287,6 +1307,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       replay($('counter'), 'burst');
       ensureAudio(); bell(.4);
       try { if (navigator.vibrate) navigator.vibrate(200); } catch (e) {}
+    } else if (c.count > c.goal - 10 && c.count < c.goal) { // the last 10 before the goal: a short tap you can feel
+      try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
     }
     save(); paintDhikr();
     replay($('dzNum'), 'bump');
@@ -1503,6 +1525,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (t === 'sit') requestAnimationFrame(sizeRuler);
     if (t === 'progress') requestAnimationFrame(() => drawCharts());
     if (t === 'dhikr' && !S.dhikr.cur) requestAnimationFrame(() => $('dzGoalIn').focus());
+    paintHit();
   }
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -1581,8 +1604,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         '<button data-act="plus">+ 5</button>' + (S.running.over ? '<button class="primary" data-act="done">Done</button>' : '');
     } else if (m === 'dhikr') {
       const c = S.dhikr.cur;
-      label = 'Dhikr'; big = String(c.count);
-      sub = (c.count >= c.goal ? 'Goal reached · ' : '') + 'of ' + c.goal + ' · click anywhere to count';
+      const extra = c.count - c.goal;
+      label = 'Dhikr'; big = extra > 0 ? '+' + extra : String(c.count);
+      sub = (extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : (extra === 0 ? 'Goal reached · ' : '') + 'of ' + c.goal) +
+        ' · click anywhere to count';
       row = '<button data-act="undo">Undo 1</button>';
     } else {
       const [n, u] = durParts(S.pick);
