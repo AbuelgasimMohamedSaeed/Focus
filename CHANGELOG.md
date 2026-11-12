@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0 (2026-11-13)
+- Theme: Dark or Light (Progress › Settings).
+- Background photos: pick a topic (Nature, Animals, Birds, Flowers, Sea, Night sky, Forest), get one photo or download 8. Photos come from Wikimedia Commons' featured pictures (Picsum/Unsplash as a backup), with the photographer credited; downloaded photos work offline.
+
 ## Android app 1.7 (2026-11-13): App Time, stage 2
 - Daily limit per watched app (tap the app on the App Time page): 10 minutes to 2 hours.
 - When an app's time is up, a full block screen covers it until tomorrow; Back and "Close it" go to the home screen.

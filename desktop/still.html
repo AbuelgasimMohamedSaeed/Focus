@@ -386,6 +386,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <button class="mini-back" id="cBack" title="Back to full view" aria-label="Back to full view"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg></button></span></div>
   <div class="mini-big" id="cBig"></div><div class="mini-sub" id="cSub"></div><div class="mini-row" id="cRow"></div>
 </div>
+<div id="bg" aria-hidden="true"></div>
+<div class="at-pick sheet bg-sheet" id="bgSheet" hidden>
+  <header><h2>Background</h2><button class="mini" id="bgDone">Done</button></header>
+  <div class="seg small bg-topics" id="bgTopics" role="group" aria-label="Photo topic"></div>
+  <div class="row2"><button class="mini" id="bgRandom">New photo</button><button class="mini" id="bgPack">Download 8</button></div>
+  <div class="bg-grid" id="bgPhotos"></div>
+  <p class="bg-credit" id="bgCredit"></p>
+</div>
 <div class="at-pick sheet" id="dzSheet" hidden>
   <header><h2>Dhikr history</h2><button class="mini" id="dzSheetDone">Done</button></header>
   <ol class="log dz-hist" id="dzHist"></ol>
@@ -529,8 +537,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     </div>
     <div class="label">History</div>
     <ol class="log" id="log"></ol>
-    <div id="setBox" hidden>
+    <div id="setBox">
       <div class="label">Settings</div>
+      <div class="set-row"><span>Theme<small>Dark or light</small></span>
+        <div class="seg small" id="themeSeg" role="group" aria-label="Theme"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div>
+      <div class="set-row"><span>Background<small id="bgName">Plain</small></span><button class="mini" id="bgBtn">Change</button></div>
       <div class="set-row" id="lineRow" hidden><span>Line at the top of the screen<small id="lineState">Shows your time left over any app</small></span>
         <button class="mini" id="lineBtn">Set up</button></div>
       <div class="set-row" id="atRow"><span>App Time page<small>See how long you spend in your apps</small></span>
@@ -1370,7 +1381,12 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const c = DZ.cur, hit = !!c && c.count >= c.goal && !$('dhikr').hidden;
     if (document.body.classList.contains('dz-hit') === hit) return;
     document.body.classList.toggle('dz-hit', hit);
-    const col = hit ? '#eceae4' : '#09090b';
+    barColor();
+  }
+  // the phone's status bar takes the page's color: the theme's, flipped while a Dhikr goal is reached
+  function barColor() {
+    const light = S.theme === 'light', hit = document.body.classList.contains('dz-hit');
+    const col = (light !== hit) ? '#eceae4' : '#09090b';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', col);
     try { if (window.FocusAndroid && FocusAndroid.barColor) FocusAndroid.barColor(col); } catch (e) {}
@@ -1829,6 +1845,102 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   }));
   setInterval(paintMute, 250);
 
+  // ---- Theme and background
+  // Backgrounds are real photos from free libraries: Wikimedia Commons' featured pictures, searched by topic,
+  // with Picsum (Unsplash photos) as a backup. Each one you pick or download is kept on the device for offline use.
+  const BG_TOPICS = [['nature', 'Nature', 'landscape'], ['animals', 'Animals', 'mammals'], ['birds', 'Birds', 'birds'], ['flowers', 'Flowers', 'flowers'],
+    ['sea', 'Sea', 'sea coast'], ['night', 'Night sky', 'night sky stars'], ['forest', 'Forest', 'forest trees']];
+  S.bg = S.bg && S.bg.type === 'photo' ? S.bg : { type: 'none' };
+  S.bgPhotos = (S.bgPhotos || []).filter(p => p.url);
+  let bgTopic = 'nature';
+  const stripTags = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return (d.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60); };
+  function applyLook() {
+    document.body.classList.toggle('theme-light', S.theme === 'light');
+    $('themeSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === (S.theme || 'dark')));
+    const ph = S.bg.type === 'photo' && S.bgPhotos.find(x => x.url === S.bg.url);
+    $('bg').style.backgroundImage = ph ? 'url("' + ph.url + '")' : '';
+    document.body.classList.toggle('has-bg', !!ph);
+    $('bgName').textContent = ph ? (ph.topic || 'Photo') + ' · ' + ph.author : 'Plain';
+    barColor();
+  }
+  function paintBgSheet() {
+    $('bgTopics').innerHTML = BG_TOPICS.map(([id, name]) => '<button data-topic="' + id + '" aria-pressed="' + (id === bgTopic) + '">' + name + '</button>').join('');
+    $('bgPhotos').innerHTML = '<button class="bg-tile" data-plain="1" aria-pressed="' + (S.bg.type !== 'photo') + '"><span>Plain</span></button>' +
+      S.bgPhotos.map((p, i) => '<button class="bg-tile" data-i="' + i + '" style="background-image:url(\'' + esc(p.thumb || p.url) + '\')" aria-pressed="' +
+        (S.bg.type === 'photo' && S.bg.url === p.url) + '"><span>' + esc(p.topic || '') + '</span><i class="x" data-del="' + i + '">✕</i></button>').join('');
+    const ph = S.bg.type === 'photo' && S.bgPhotos.find(x => x.url === S.bg.url);
+    $('bgCredit').textContent = ph ? 'Photo: ' + ph.author + (ph.license ? ' · ' + ph.license : '') + ' · ' + ph.source
+      : 'Pick a topic, then get one photo or download a pack of 8. Downloaded photos stay on this device and work offline.';
+  }
+  async function findPhotos(topic, n) {
+    const t = BG_TOPICS.find(x => x[0] === topic), name = t[1];
+    try { // Wikimedia Commons: featured pictures, searched by topic
+      const q = 'incategory:Featured_pictures_on_Wikimedia_Commons filetype:bitmap ' + t[2];
+      for (const offset of [Math.floor(Math.random() * 120), 0]) {
+        const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=40&gsroffset=' + offset +
+          '&gsrsearch=' + encodeURIComponent(q) + '&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1440&iiextmetadatafilter=Artist|LicenseShortName';
+        const data = await (await fetch(u)).json();
+        const pages = Object.values((data.query && data.query.pages) || {}).filter(p => p.imageinfo && p.imageinfo[0].thumburl);
+        if (!pages.length) continue;
+        return pages.sort(() => Math.random() - .5).slice(0, n).map(p => {
+          const ii = p.imageinfo[0], m = ii.extmetadata || {};
+          return { url: ii.thumburl, thumb: ii.thumburl.replace(/\/1440px-/, '/360px-'), author: stripTags(m.Artist && m.Artist.value) || 'Wikimedia Commons',
+            license: m.LicenseShortName ? m.LicenseShortName.value : '', source: 'Wikimedia Commons', topic: name };
+        });
+      }
+    } catch (e) {}
+    // backup: Picsum, free Unsplash photos (no topics there)
+    const res = await fetch('https://picsum.photos/v2/list?limit=40&page=' + (1 + Math.floor(Math.random() * 20)));
+    return (await res.json()).sort(() => Math.random() - .5).slice(0, n).map(p => ({
+      url: 'https://picsum.photos/id/' + p.id + '/1080/1920', thumb: 'https://picsum.photos/id/' + p.id + '/300/400', author: p.author, license: 'Unsplash licence',
+      source: 'Unsplash via Picsum', topic: name }));
+  }
+  function keepPhoto(p) {
+    if (S.bgPhotos.some(x => x.url === p.url)) return false;
+    S.bgPhotos.unshift(p);
+    S.bgPhotos = S.bgPhotos.slice(0, 40);
+    [p.url, p.thumb].forEach(u => fetch(u, { mode: 'no-cors' }).catch(() => {})); // the app keeps a copy for offline use
+    return true;
+  }
+  $('themeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-theme]');
+    if (!b) return;
+    S.theme = b.dataset.theme; save(); applyLook(); drawCharts();
+  });
+  $('bgBtn').addEventListener('click', () => { paintBgSheet(); $('bgSheet').hidden = false; });
+  $('bgDone').addEventListener('click', () => { $('bgSheet').hidden = true; });
+  $('bgTopics').addEventListener('click', e => {
+    const b = e.target.closest('[data-topic]');
+    if (b) { bgTopic = b.dataset.topic; paintBgSheet(); }
+  });
+  $('bgPhotos').addEventListener('click', e => {
+    const del = e.target.closest('[data-del]'), t = e.target.closest('.bg-tile');
+    if (del) {
+      const p = S.bgPhotos.splice(+del.dataset.del, 1)[0];
+      if (p && S.bg.url === p.url) S.bg = { type: 'none' };
+    } else if (t && t.dataset.plain) S.bg = { type: 'none' };
+    else if (t) S.bg = { type: 'photo', url: S.bgPhotos[+t.dataset.i].url };
+    else return;
+    save(); applyLook(); paintBgSheet();
+  });
+  async function getPhotos(n, btn) {
+    if (!navigator.onLine) { toast('Connect to the internet for new photos'); return; }
+    const was = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Getting photos…';
+    try {
+      const got = (await findPhotos(bgTopic, n + 4)).filter(p => !S.bgPhotos.some(x => x.url === p.url)).slice(0, n);
+      if (!got.length) throw new Error('none');
+      got.slice().reverse().forEach(keepPhoto);
+      if (n === 1) S.bg = { type: 'photo', url: got[0].url };
+      save(); applyLook(); paintBgSheet();
+      if (n > 1) toast(got.length + ' photos downloaded. They work offline now.');
+    } catch (e) { toast('Could not reach the photo libraries, try again'); }
+    btn.disabled = false; btn.textContent = was;
+  }
+  $('bgRandom').addEventListener('click', e => getPhotos(1, e.currentTarget));
+  $('bgPack').addEventListener('click', e => getPhotos(8, e.currentTarget));
+  applyLook();
+
   // ---- Dhikr history lives in its own sheet, so the Dhikr screen is only the counter
   $('dzHistBtn').addEventListener('click', () => { $('dzSheet').hidden = false; });
   $('dzSheetDone').addEventListener('click', () => { $('dzSheet').hidden = true; });
@@ -1938,7 +2050,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const show = AT_OK && AT.on;
     $('atTab').hidden = !show;
     tabsEl.classList.toggle('five', show);
-    $('setBox').hidden = !AT_OK && !LINE_OK;
     $('atRow').hidden = !AT_OK;
     $('atSwitch').setAttribute('aria-checked', String(AT.on));
     if (!show && !$('apptime').hidden) showTab('progress');
