@@ -1,5 +1,11 @@
 # Changelog
 
+## Android app 1.6 (2026-11-13)
+- Mini button opens Focus in the phone's own floating window (Xiaomi's, Samsung's…) when the phone allows it; otherwise Focus's own mini window.
+- Focus's own mini window keeps its shape when you resize it, and everything inside grows and shrinks with it. Pull the line at the bottom down (or up) for full screen; the expand button is gone.
+- The top line is thicker, so you can see it at a glance.
+- Dhikr: History moved to a button at the top; no Undo; no instructions while counting — just the counter.
+
 ## Android app 1.5 (2026-11-13)
 - Silence button during a sit (top left, and in the mini window): mutes the bells and the ticking; vibration stays.
 - The top line now disappears whenever Focus is open.

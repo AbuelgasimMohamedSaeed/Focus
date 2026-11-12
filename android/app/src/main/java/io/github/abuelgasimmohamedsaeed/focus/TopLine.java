@@ -57,7 +57,7 @@ final class TopLine {
         if (bar == null) {
             float d = c.getResources().getDisplayMetrics().density;
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT, Math.max(3, Math.round(3 * d)),
+                    WindowManager.LayoutParams.MATCH_PARENT, Math.round(5 * d), // thick enough to see at a glance
                     svc != null ? WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
                             : WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE

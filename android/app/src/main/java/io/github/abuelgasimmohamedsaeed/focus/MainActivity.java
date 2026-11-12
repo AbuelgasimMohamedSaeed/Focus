@@ -2,6 +2,7 @@ package io.github.abuelgasimmohamedsaeed.focus;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ActivityOptions;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.content.Intent;
@@ -12,12 +13,14 @@ import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -66,6 +69,9 @@ public class MainActivity extends Activity {
     private int pageColor = BG;
     private WindowManager.LayoutParams miniLp;
     private float dragX, dragY;
+    private int startW;
+    /** Shape of the mini window's page area: 210 wide by 176 high. */
+    private static final float RATIO = 210f / 176f;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -236,6 +242,48 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    /**
+     * The mini button: first ask Android for its own floating window (Xiaomi, Samsung and others draw it,
+     * with their own handle, resize corner and full-screen gesture). If the phone does not allow that,
+     * Focus's own mini window opens instead.
+     */
+    void openFloating() {
+        if (isInMultiWindowMode() || !startFloating()) {
+            openOwnMini();
+            return;
+        }
+        web.postDelayed(() -> {
+            if (isInMultiWindowMode()) { // it worked: show the whole app in the floating window
+                web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
+            } else {
+                openOwnMini();
+            }
+        }, 1200);
+    }
+
+    private void openOwnMini() {
+        if (Settings.canDrawOverlays(this)) {
+            openMini();
+        } else { // needs "Display over other apps" first
+            web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
+            askOverlay(true);
+        }
+    }
+
+    private boolean startFloating() {
+        try {
+            ActivityOptions o = ActivityOptions.makeBasic();
+            ActivityOptions.class.getMethod("setLaunchWindowingMode", int.class).invoke(o, 5); // 5 = freeform window
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int w = Math.round(dm.widthPixels * .5f), h = Math.round(dm.heightPixels * .42f), m = Math.round(16 * dm.density);
+            o.setLaunchBounds(new Rect(dm.widthPixels - w - m, m * 8, dm.widthPixels - m, m * 8 + h));
+            startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), o.toBundle());
+            return true;
+        } catch (Throwable t) {
+            return false; // this phone does not let apps ask for it
+        }
+    }
+
     /** Moves the page into a small window that floats over other apps; drag it by its top bar. */
     void openMini() {
         if (miniShown || !Settings.canDrawOverlays(this)) return;
@@ -244,8 +292,10 @@ public class MainActivity extends Activity {
         int screenW = getResources().getDisplayMetrics().widthPixels, screenH = getResources().getDisplayMetrics().heightPixels;
         int bar = Math.round(24 * d);
         // starts small; drag the corner to make it bigger, and it remembers your size
-        int w = clamp(prefs().getInt("miniW", Math.round(210 * d)), Math.round(150 * d), screenW - Math.round(16 * d));
-        int h = clamp(prefs().getInt("miniH", Math.round(176 * d) + bar), Math.round(110 * d) + bar, Math.round(screenH * .7f));
+        // the page inside is drawn for 210 x 176 and zooms with the window, so the window keeps that shape
+        int minW = Math.round(150 * d), maxW = Math.min(screenW - Math.round(16 * d), Math.round((screenH * .7f - bar) * RATIO));
+        int w = clamp(prefs().getInt("miniW", Math.round(210 * d)), minW, maxW);
+        int h = Math.round(w / RATIO) + bar;
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -321,16 +371,18 @@ public class MainActivity extends Activity {
         resize.setOnTouchListener((v, e) -> {
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    dragX = e.getRawX() - lp.width;
-                    dragY = e.getRawY() - lp.height;
+                    dragX = e.getRawX();
+                    dragY = e.getRawY();
+                    startW = lp.width;
                     return true;
-                case MotionEvent.ACTION_MOVE:
-                    lp.width = clamp(Math.round(e.getRawX() - dragX), Math.round(150 * d), screenW - Math.round(16 * d));
-                    lp.height = clamp(Math.round(e.getRawY() - dragY), Math.round(110 * d) + bar, Math.round(screenH * .7f));
+                case MotionEvent.ACTION_MOVE: // grows or shrinks in both directions together, keeping its shape
+                    float grow = ((e.getRawX() - dragX) + (e.getRawY() - dragY) * RATIO) / 2f;
+                    lp.width = clamp(Math.round(startW + grow), minW, maxW);
+                    lp.height = Math.round(lp.width / RATIO) + bar;
                     try { wm.updateViewLayout(box, lp); } catch (Exception ignored) {}
                     return true;
                 case MotionEvent.ACTION_UP:
-                    prefs().edit().putInt("miniW", lp.width).putInt("miniH", lp.height).apply();
+                    prefs().edit().putInt("miniW", lp.width).apply();
                     web.postDelayed(() -> { // make sure the page lays itself out for the new size
                         web.requestLayout();
                         web.evaluateJavascript("window.dispatchEvent(new Event('resize'))", null);
@@ -344,7 +396,7 @@ public class MainActivity extends Activity {
         content.addView(web, new FrameLayout.LayoutParams(-1, -1));
         int gs = Math.round(32 * d);
         content.addView(resize, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
-        View home = new View(this) { // the line at the bottom: tap it or swipe it up to open the full app
+        View home = new View(this) { // the line at the bottom: pull it down (or up) to open the full app
             private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             @Override
             protected void onDraw(Canvas c) {
@@ -360,8 +412,7 @@ public class MainActivity extends Activity {
                 return true;
             }
             if (e.getActionMasked() == MotionEvent.ACTION_UP) {
-                float moved = e.getRawY() - dragY;
-                if (moved < -16 * d || Math.abs(moved) < 10 * d) closeMini(true); // swiped up, or tapped
+                if (Math.abs(e.getRawY() - dragY) > 24 * d) closeMini(true); // pulled down or up: full screen
                 return true;
             }
             return e.getActionMasked() == MotionEvent.ACTION_MOVE;

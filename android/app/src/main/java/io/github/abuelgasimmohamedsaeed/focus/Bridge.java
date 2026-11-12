@@ -25,12 +25,8 @@ final class Bridge {
     /** Open (true) or close (false) the floating mini window. False when Android first needs the user's permission. */
     @JavascriptInterface
     public boolean mini(boolean on) {
-        if (on && !Settings.canDrawOverlays(app)) {
-            activity.runOnUiThread(() -> activity.askOverlay(true));
-            return false;
-        }
         activity.runOnUiThread(() -> {
-            if (on) activity.openMini();
+            if (on) activity.openFloating();
             else activity.closeMini(true);
         });
         return true;

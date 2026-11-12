@@ -227,12 +227,17 @@ body.dz-hit .counter.done .of{color:var(--muted)}
 .switch[aria-checked="true"]{background:var(--fg);border-color:var(--fg)}
 .switch[aria-checked="true"]::after{transform:translateX(18px);background:var(--pill-fg)}
 .tabs.five .tab{padding:6px 8px}
-.dz-histbtn{align-self:center;margin-top:12px}
+.hist-btn{right:calc(max(12px,env(safe-area-inset-right,0px)) + 96px)}
+.fs.hist-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .stats > div:last-child:nth-child(odd){grid-column:1/-1}
 .sheet .log{flex:1;overflow-y:auto;margin-top:12px;padding-bottom:24px}
 /* the Android mini window can be made very small: drop the extras first */
-@media (max-height:170px){.pipview .mini-sub{display:none}}
-@media (max-height:125px){.pipview .mini-row{display:none}}
+@media (max-height:170px){body:not(.zoomcv) .pipview .mini-sub{display:none}}
+@media (max-height:125px){body:not(.zoomcv) .pipview .mini-row{display:none}}
+/* Android's small windows: the mini view is laid out at 210 x 176 and zoomed to fill, so it looks the same at every size */
+body.zoomcv .compact-view{right:auto;bottom:auto}
+body.zoomcv .pipview .mini-big{font-size:40px;margin-top:18px}
+body.zoomcv .pipview .mini-sub{font-size:11px;padding:0 6px}
 #apptime .cap{padding-inline-end:100px}
 
 /* Tabs */
@@ -386,6 +391,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   .hold{height:58px}
   .fs{width:46px;height:46px}
   .mini-open{right:calc(max(12px,env(safe-area-inset-right,0px)) + 54px)}
+  .hist-btn{right:calc(max(12px,env(safe-area-inset-right,0px)) + 108px)}
   .what{height:48px}
   button,.chip,.wisdom{-webkit-tap-highlight-color:transparent}
 }
@@ -405,6 +411,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 
 
 <button class="fs" id="fsBtn" aria-label="Full screen" title="Full screen (or double-click the background)"></button>
+<button class="fs hist-btn" id="dzHistBtn" aria-label="Dhikr history" title="History" hidden><svg viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4.5v4h4"/><path d="M12 8v4.2l2.8 1.8"/></svg></button>
 <button class="fs mute-btn" id="muteBtn" aria-label="Sound on" title="Silence the sound" hidden><svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg></button>
 <button class="fs mini-open" id="miniBtn" aria-label="Mini window" title="Mini window, stays on top"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1"/></svg></button>
 <div class="toast" id="toast" hidden></div>
@@ -501,12 +508,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <span class="face"><span class="num" id="dzNum">0</span><span class="of" id="dzOf">of 33</span></span>
       </button>
       <div class="dz-row" id="dzCtl" hidden>
-        <button class="mini" id="dzUndo">Undo 1</button>
         <button class="mini" id="dzReset">Start fresh</button>
       </div>
     </div>
     <p class="hint" id="dzHint">Type how many you want to count, then press Begin.</p>
-    <button class="mini dz-histbtn" id="dzHistBtn">History</button>
   </section>
 
 
@@ -1321,8 +1326,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         : extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : 'Goal reached · keep going or Start fresh';
       $('dzRing').style.strokeDashoffset = RING * (1 - Math.min(1, c.count / c.goal));
       $('counter').classList.toggle('done', done);
-      $('dzHint').textContent = 'Tap anywhere above the tabs, or press the space bar. Start fresh saves this session to History.';
+      $('dzHint').hidden = true; // while counting, the screen is only the counter
     } else {
+      $('dzHint').hidden = false;
       $('dzHint').textContent = 'Type how many you want to count, then press Begin.';
     }
     const todays = DZ.log.filter(e => dkey(e.start) === k);
@@ -1391,10 +1397,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (e.code !== 'Space' || e.repeat || $('dhikr').hidden || !$('run').hidden || !DZ.cur) return;
     if (e.target.closest && e.target.closest('button, input, textarea')) return;
     e.preventDefault(); countOne();
-  });
-  $('dzUndo').addEventListener('click', () => {
-    if (!DZ.cur || DZ.cur.count <= 0) return;
-    DZ.cur.count--; save(); paintDhikr();
   });
   let rsArm = false, rsT;
   $('dzReset').addEventListener('click', () => {
@@ -1543,6 +1545,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (t === 'progress') requestAnimationFrame(() => drawCharts());
     if (t === 'dhikr' && !S.dhikr.cur) requestAnimationFrame(() => $('dzGoalIn').focus());
     if (t === 'apptime') paintAppTime();
+    $('dzHistBtn').hidden = t !== 'dhikr';
     paintHit();
   }
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -1626,7 +1629,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       label = 'Dhikr'; big = extra > 0 ? '+' + extra : String(c.count);
       sub = (extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : (extra === 0 ? 'Goal reached · ' : '') + 'of ' + c.goal) +
         (ANDROID ? ' · tap anywhere to count' : ' · click anywhere to count');
-      row = '<button data-act="undo">Undo 1</button>';
+      row = '';
     } else {
       const [n, u] = durParts(S.pick);
       label = S.label || 'Sit'; big = n; sub = u + (ANDROID ? '' : ' · scroll to change') + (S.countUp ? ' · counts up' : '');
@@ -1657,6 +1660,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('cv').hidden = !small; document.body.classList.toggle('compact', small);
     $('cBack').hidden = small; // Android sizes this window, not Focus
     if (small) paintMini(); else setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 300);
+    fitCompact();
+  }
+  function fitCompact() {
+    const cv = $('cv'), on = ANDROID && (autoCompact || !!(compact && compact.native));
+    document.body.classList.toggle('zoomcv', on);
+    if (!on) { cv.style.zoom = cv.style.width = cv.style.height = ''; return; }
+    const z = Math.min(innerWidth / 210, innerHeight / 176);
+    cv.style.zoom = z; cv.style.width = innerWidth / z + 'px'; cv.style.height = innerHeight / z + 'px';
   }
 
   // while the mini window is open, the big window shrinks to the mini's size and hides right behind it
@@ -1731,7 +1742,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   function miniAct(a) {
     if (a === 'start') startSit();
     else if (a === 'done') finish(false);
-    else if (a === 'undo') $('dzUndo').click();
     else if (a === 'plus') adjustSit(1);
     else if (a === 'minus') adjustSit(-1);
     paintMini();
@@ -1742,15 +1752,16 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       if (compact) return;
       if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) {} await new Promise(r => setTimeout(r, 200)); }
       compact = { native: true };
-      autoCompact = false; $('cBack').hidden = false;
+      autoCompact = false; $('cBack').hidden = ANDROID; // on Android, pull the line at the bottom to go full screen
       document.body.classList.add('compact'); $('cv').hidden = false; paintMini();
       let ok = true;
       try { ok = await window.stillNative.mini(true); } catch (e) {}
       if (ok === false) { compact = null; $('cv').hidden = true; document.body.classList.remove('compact'); } // Android asked for permission first
+      fitCompact();
     } else {
       if (!compact) return;
       compact = null;
-      $('cv').hidden = true; document.body.classList.remove('compact');
+      $('cv').hidden = true; document.body.classList.remove('compact'); fitCompact();
       try { await window.stillNative.mini(false); } catch (e) {}
       setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
     }
@@ -1759,7 +1770,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   window.focusMiniClosed = () => {
     if (!compact || !compact.native) return;
     compact = null;
-    $('cv').hidden = true; document.body.classList.remove('compact');
+    $('cv').hidden = true; document.body.classList.remove('compact'); fitCompact();
     setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); checkAutoCompact(); }, 400);
   };
   if ((ANDROID && !FocusAndroid.mini) || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
@@ -1914,7 +1925,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   render();
   newWisdom();
   requestAnimationFrame(sizeRuler);
-  window.addEventListener('resize', () => { sizeRuler(); drawCharts(); moveInd(); checkAutoCompact(); });
+  window.addEventListener('resize', () => { sizeRuler(); drawCharts(); moveInd(); checkAutoCompact(); fitCompact(); });
   checkAutoCompact();
   replay($('sit'), 'enter'); moveInd();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveInd);
