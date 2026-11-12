@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -60,6 +61,9 @@ public class MainActivity extends Activity {
     private long loadedAt;
     private String pendingUpdate;
     private LinearLayout miniBox;
+    private GradientDrawable miniBg;
+    private View miniHandle;
+    private int pageColor = BG;
     private WindowManager.LayoutParams miniLp;
     private float dragX, dragY;
 
@@ -170,7 +174,9 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             return;
         }
+        pageColor = color;
         root.setBackgroundColor(color);
+        paintMini();
         WindowInsetsController bars = getWindow().getInsetsController();
         if (bars != null) {
             int dark = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
@@ -236,31 +242,34 @@ public class MainActivity extends Activity {
         if (custom != null) exitFullScreen();
         float d = getResources().getDisplayMetrics().density;
         int screenW = getResources().getDisplayMetrics().widthPixels, screenH = getResources().getDisplayMetrics().heightPixels;
-        int bar = Math.round(22 * d);
+        int bar = Math.round(24 * d);
         // starts small; drag the corner to make it bigger, and it remembers your size
         int w = clamp(prefs().getInt("miniW", Math.round(210 * d)), Math.round(150 * d), screenW - Math.round(16 * d));
         int h = clamp(prefs().getInt("miniH", Math.round(176 * d) + bar), Math.round(110 * d) + bar, Math.round(screenH * .7f));
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(BG);
-        bg.setCornerRadius(18 * d);
-        bg.setStroke(Math.max(1, Math.round(d)), 0xFF2A2A30);
+        GradientDrawable bg = new GradientDrawable(); // one surface in the page's own color, like Xiaomi's floating windows
+        bg.setCornerRadius(22 * d);
         box.setBackground(bg);
         box.setClipToOutline(true);
+        box.setElevation(10 * d);
 
         FrameLayout handle = new FrameLayout(this);
-        View grip = new View(this);
-        GradientDrawable gripBg = new GradientDrawable();
-        gripBg.setColor(0xFF4A4A52);
-        gripBg.setCornerRadius(2 * d);
-        grip.setBackground(gripBg);
-        handle.addView(grip, new FrameLayout.LayoutParams(Math.round(36 * d), Math.round(4 * d), Gravity.CENTER));
+        View dots = new View(this) { // three small dots to grab and move the window
+            private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override
+            protected void onDraw(Canvas c) {
+                p.setColor(Color.luminance(pageColor) > .5f ? 0xFF9A9A96 : 0xFF5A5A62);
+                float cy = getHeight() / 2f, cx = getWidth() / 2f, r = 2.4f * d, gap = 9 * d;
+                for (int i = -1; i <= 1; i++) c.drawCircle(cx + i * gap, cy, r, p);
+            }
+        };
+        handle.addView(dots, new FrameLayout.LayoutParams(-1, -1));
         TextView close = new TextView(this);
         close.setText("\u2715");
         close.setTextColor(0xFF8B8A86);
-        close.setTextSize(12);
+        close.setTextSize(11);
         close.setGravity(Gravity.CENTER);
         close.setContentDescription("Close mini window");
         close.setOnClickListener(v -> closeMini(false));
@@ -300,12 +309,12 @@ public class MainActivity extends Activity {
             private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             @Override
             protected void onDraw(Canvas c) {
-                p.setColor(0xFF6A6A72);
-                p.setStrokeWidth(1.6f * d);
+                p.setColor(Color.luminance(pageColor) > .5f ? 0xFF9A9A96 : 0xFF5A5A62);
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(3 * d);
                 p.setStrokeCap(Paint.Cap.ROUND);
-                float s = getWidth(), m = 6 * d;
-                c.drawLine(s - m, s * .45f, s * .45f, s - m, p);
-                c.drawLine(s - m, s * .72f, s * .72f, s - m, p);
+                float s = getWidth(), m = 5 * d, r = 18 * d;
+                c.drawArc(new RectF(s - m - 2 * r, s - m - 2 * r, s - m, s - m), 10, 70, false, p);
             }
         };
         resize.setContentDescription("Resize mini window");
@@ -329,7 +338,7 @@ public class MainActivity extends Activity {
         });
         root.removeView(web);
         content.addView(web, new FrameLayout.LayoutParams(-1, -1));
-        int gs = Math.round(26 * d);
+        int gs = Math.round(32 * d);
         content.addView(resize, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
         try {
@@ -341,7 +350,10 @@ public class MainActivity extends Activity {
             return;
         }
         miniBox = box;
+        miniBg = bg;
+        miniHandle = handle;
         miniLp = lp;
+        paintMini();
         miniShown = true;
         Sit sit = Sit.load(this);
         Engine.refresh(this, sit); // the mini window shows the time, so no notification or top line
@@ -360,6 +372,8 @@ public class MainActivity extends Activity {
         if (web.getParent() instanceof ViewGroup) ((ViewGroup) web.getParent()).removeView(web);
         root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
         miniBox = null;
+        miniBg = null;
+        miniHandle = null;
         miniLp = null;
         web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
         if (!visible && !openApp) { // closed with the ✕: Focus stays in the background
@@ -367,6 +381,23 @@ public class MainActivity extends Activity {
             if (sit != null) Engine.refresh(this, sit);
             web.onPause();
             web.pauseTimers();
+        }
+    }
+
+    /** The mini window wears the page's color: dark, or white when a Dhikr goal is reached. */
+    private void paintMini() {
+        if (miniBox == null) return;
+        miniBg.setColor(pageColor);
+        miniHandle.setBackgroundColor(pageColor);
+        miniBox.invalidate();
+        for (int i = 0; i < miniBox.getChildCount(); i++) invalidateAll(miniBox.getChildAt(i));
+    }
+
+    private static void invalidateAll(View v) {
+        v.invalidate();
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) invalidateAll(g.getChildAt(i));
         }
     }
 

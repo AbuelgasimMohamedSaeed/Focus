@@ -1607,9 +1607,21 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (rowEl.dataset.sig !== st.row) { rowEl.innerHTML = st.row; rowEl.dataset.sig = st.row; }
   }
   function paintMini() {
-    const st = (mini || compact || tucked) ? miniState() : null;
+    const st = (mini || compact || tucked || autoCompact) ? miniState() : null;
     if (mini && mini.document.getElementById('mBig')) paintInto(id => mini.document.getElementById('m' + id), st);
-    if (compact || tucked) paintInto(id => $('c' + id), st);
+    if (compact || tucked || autoCompact) paintInto(id => $('c' + id), st);
+  }
+  // Android: when Focus itself is opened in a small window (Xiaomi's floating window, split screen),
+  // it switches to the same small timer / counter view as the mini window, and back when it grows
+  let autoCompact = false;
+  function checkAutoCompact() {
+    if (!ANDROID || (compact && compact.native)) return;
+    const small = innerWidth < 380 && innerHeight < 560;
+    if (small === autoCompact) return;
+    autoCompact = small;
+    $('cv').hidden = !small; document.body.classList.toggle('compact', small);
+    $('cBack').hidden = small; // Android sizes this window, not Focus
+    if (small) paintMini(); else setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 300);
   }
 
   // while the mini window is open, the big window shrinks to the mini's size and hides right behind it
@@ -1695,6 +1707,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       if (compact) return;
       if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) {} await new Promise(r => setTimeout(r, 200)); }
       compact = { native: true };
+      autoCompact = false; $('cBack').hidden = false;
       document.body.classList.add('compact'); $('cv').hidden = false; paintMini();
       let ok = true;
       try { ok = await window.stillNative.mini(true); } catch (e) {}
@@ -1712,7 +1725,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (!compact || !compact.native) return;
     compact = null;
     $('cv').hidden = true; document.body.classList.remove('compact');
-    setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
+    setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); checkAutoCompact(); }, 400);
   };
   if ((ANDROID && !FocusAndroid.mini) || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
   $('miniBtn').addEventListener('click', () => {
@@ -1845,7 +1858,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   render();
   newWisdom();
   requestAnimationFrame(sizeRuler);
-  window.addEventListener('resize', () => { sizeRuler(); drawCharts(); moveInd(); });
+  window.addEventListener('resize', () => { sizeRuler(); drawCharts(); moveInd(); checkAutoCompact(); });
+  checkAutoCompact();
   replay($('sit'), 'enter'); moveInd();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveInd);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeRuler);

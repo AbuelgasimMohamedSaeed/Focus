@@ -1,5 +1,9 @@
 # Changelog
 
+## Android app 1.4 (2026-11-13)
+- Mini window looks like Xiaomi's floating windows: one surface in the page's color (white at a Dhikr goal), three dots on top to move it, a curved corner to resize it.
+- Opening Focus in Xiaomi's own floating window (or split screen) switches it to the small timer / counter view by itself.
+
 ## Android app 1.3 (2026-11-13)
 - Line at the top of the screen now draws over the status bar, through Focus's Accessibility service (which reads nothing on screen). It redraws only when it would move a pixel, and never with the screen off.
 - Mini window opens small (Sit timer or Dhikr) and can be resized from its bottom-right corner; it remembers the size.
