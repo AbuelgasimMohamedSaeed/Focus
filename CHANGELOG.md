@@ -1,5 +1,12 @@
 # Changelog
 
+## Android app 1.8 (2026-11-13): App Time, stage 3
+- Unlock 5 more minutes from the block screen, after waiting 30 seconds or typing a sentence (or not at all).
+- Emergency unlocks: 15 minutes with no questions, 1, 3 or 5 per week.
+- Break before reopening: a limited app stays closed for 5, 10 or 15 minutes after you leave it.
+- PIN: pause all limits for an hour (on the App Time page or the block screen), for you or a friend using your phone.
+- Delay before loosening: lowering or removing limits, turning on Track only or weakening any rule takes effect only after 10 minutes to an hour. Tightening is instant.
+
 ## 1.4.0 (2026-11-13)
 - Theme: Dark or Light (Progress › Settings).
 - Background photos: pick a topic (Nature, Animals, Birds, Flowers, Sea, Night sky, Forest), get one photo or download 8. Photos come from Wikimedia Commons' featured pictures (Picsum/Unsplash as a backup), with the photographer credited; downloaded photos work offline.

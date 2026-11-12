@@ -99,6 +99,19 @@ final class Bridge {
         FocusAccessibility.rulesChanged();
     }
 
+    /** {pendingAt, pausedUntil, emergencyLeft} for the App Time page. */
+    @JavascriptInterface
+    public String rulesStatus() {
+        return Rules.status(app);
+    }
+
+    /** Pause all limits (the page checked the PIN first); 0 resumes them. */
+    @JavascriptInterface
+    public void pauseLimits(int minutes) {
+        Rules.pause(app, minutes);
+        FocusAccessibility.rulesChanged();
+    }
+
     @JavascriptInterface
     public String appIcon(String pkg) {
         return AppUsage.icon(app, pkg);

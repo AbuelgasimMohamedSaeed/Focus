@@ -31,12 +31,13 @@ public class FocusAccessibility extends AccessibilityService {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || event.getPackageName() == null) return;
         String pkg = event.getPackageName().toString();
         if (pkg.equals(home())) { // back on the home screen: no app is open
-            front = null;
+            leave();
             main.removeCallbacks(recheck);
             return;
         }
         if (pkg.equals(getPackageName()) || !AppUsage.apps(this).containsKey(pkg)) return; // keyboards, pop-ups, Focus itself
         if (pkg.equals(front)) return;
+        leave();
         front = pkg;
         check(pkg);
     }
@@ -55,23 +56,49 @@ public class FocusAccessibility extends AccessibilityService {
         return homePkg;
     }
 
-    /** Block the app now if its time is up, or set one timer for the moment it will be. */
+    /** Leaving an app starts its cooldown. */
+    private void leave() {
+        if (front != null && Rules.baseLimit(this, front) > 0) Rules.left(this, front);
+        front = null;
+    }
+
+    /** Block the app now if its time is up (or it is cooling down), or set one timer for the moment it will be. */
     private void check(String pkg) {
         main.removeCallbacks(recheck);
         if (Rules.trackOnly(this)) return;
+        if (Rules.paused(this)) { // paused with the PIN: look again when the pause ends
+            main.postDelayed(recheck, Rules.pausedUntil(this) - System.currentTimeMillis() + 1500);
+            return;
+        }
         int limit = Rules.limit(this, pkg);
         if (limit <= 0) return;
+        long cool = Rules.cooldownLeft(this, pkg);
+        if (cool > 0) {
+            block(pkg, BlockActivity.COOLDOWN, cool, limit);
+            return;
+        }
         long used = AppUsage.usedToday(this, pkg), left = limit * 60000L - used;
         if (left > 0) {
             main.postDelayed(recheck, left + 1500);
             return;
         }
+        block(pkg, BlockActivity.LIMIT, used, limit);
+    }
+
+    private void block(String pkg, String why, long value, int limit) {
         front = null; // so coming back to it checks again
         startActivity(new Intent(this, BlockActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 .putExtra(BlockActivity.EXTRA_PKG, pkg)
-                .putExtra(BlockActivity.EXTRA_USED, used)
+                .putExtra(BlockActivity.EXTRA_WHY, why)
+                .putExtra(BlockActivity.EXTRA_VALUE, value)
                 .putExtra(BlockActivity.EXTRA_LIMIT, limit));
+    }
+
+    /** After an unlock: the app is open again, so time it from now. */
+    static void unlocked(String pkg) {
+        FocusAccessibility s = instance;
+        if (s != null) s.main.post(() -> { s.front = pkg; s.check(pkg); });
     }
 
     /** The rules changed on the App Time page: check the app that is open right now again. */
