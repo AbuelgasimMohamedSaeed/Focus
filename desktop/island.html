@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Focus</title>
+<style>
+/* The pill: a phone-style live timer at the top of the screen. It can shrink to just its progress line. */
+:root{--bg:rgba(10,10,12,.94);--fg:#eceae4;--muted:#8a8a91;--line:rgba(236,234,228,.14);--glow:rgba(236,234,228,.3);--dot:#eceae4;
+  --sans:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--mono:"Cascadia Mono",Consolas,ui-monospace,monospace;--ease:cubic-bezier(.2,.8,.2,1);color-scheme:dark}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;user-select:none;-webkit-user-select:none}
+body{position:relative}
+.pill{position:absolute;top:6px;left:50%;width:340px;margin-left:-170px;height:44px;box-sizing:border-box;border-radius:999px;background:var(--bg);border:1px solid var(--line);
+  box-shadow:0 10px 28px -10px rgba(0,0,0,.7);display:flex;align-items:center;gap:10px;padding:0 10px 0 18px;
+  color:var(--fg);font-family:var(--sans);cursor:pointer;overflow:hidden;
+  transform-origin:50% 0;transition:transform .45s var(--ease),opacity .35s var(--ease);animation:grow .55s var(--ease) both}
+.pill:hover{transform:scale(1.02)}
+@keyframes grow{from{transform:scaleX(.35) scaleY(.7);opacity:0}}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dot);flex:none;box-shadow:0 0 10px var(--dot)}
+.label{flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.time{font:600 17px var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-right:2px}
+.ib{width:24px;height:24px;flex:none;border:0;border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0;transition:background .2s,color .2s}
+.ib:hover{background:rgba(236,234,228,.1);color:var(--fg)}
+.ib svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bar{position:absolute;left:18px;right:18px;bottom:6px;height:2px;border-radius:2px;background:var(--line);overflow:hidden}
+.bar i,.line i{position:absolute;inset:0;background:var(--dot);border-radius:inherit;transform-origin:left center}
+/* line-only mode */
+.line{position:absolute;top:2px;left:50%;width:260px;margin-left:-130px;height:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
+.line .track{position:absolute;left:0;right:0;top:4px;height:4px;border-radius:4px;background:rgba(10,10,12,.55);box-shadow:0 0 0 1px var(--line);overflow:hidden}
+.line:hover .track{height:6px;top:3px}
+body.collapsed .pill{opacity:0;transform:scaleX(.7) scaleY(.1);pointer-events:none}
+body.collapsed .line{opacity:1;pointer-events:auto}
+/* time is up */
+.over .bar{opacity:0}
+.over{animation:grow .55s var(--ease) both, breathe 3.2s ease-in-out .6s infinite}
+body.isover .line i{transform:none!important}
+body.isover .line .track{animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 1px var(--glow),0 0 22px -2px var(--glow)}}
+@media (prefers-reduced-motion:reduce){.pill,.over,body.isover .line .track{animation:none}}
+</style>
+</head>
+<body>
+<div class="pill" id="pill" title="Open Focus">
+  <span class="dot"></span>
+  <span class="label" id="label">Focus</span>
+  <span class="time" id="time">--:--</span>
+  <button class="ib" id="collapse" title="Show only the line" aria-label="Show only the line"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+  <button class="ib" id="close" title="Hide for this sit" aria-label="Hide for this sit"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <span class="bar"><i id="bar"></i></span>
+</div>
+<div class="line" id="line" title="Show the timer"><span class="track"><i id="lbar"></i></span></div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = s => { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? h + ':' + pad(m) + ':' + pad(x) : pad(m) + ':' + pad(x); };
+  let st = null, timer = null, barFor = '';
+  function paint() {
+    if (!st) return;
+    const now = Date.now(), left = st.endAt - now, total = st.planned * 60000, over = left <= 0;
+    $('pill').classList.toggle('over', over);
+    document.body.classList.toggle('isover', over);
+    $('label').textContent = over ? 'Time’s up' + (st.label ? ' · ' + st.label : '') : (st.label || 'Focus');
+    $('time').textContent = over ? '+' + fmt(Math.floor(-left / 1000)) : fmt(Math.ceil(left / 1000));
+    const key = st.endAt + ':' + st.planned;
+    if (!over && key !== barFor) { // one compositor animation per line, restarted only when the sit changes
+      barFor = key;
+      const frac = Math.max(0, Math.min(1, left / total));
+      ['bar', 'lbar'].forEach(id => {
+        const el = $(id);
+        el.getAnimations().forEach(a => a.cancel());
+        el.animate([{ transform: 'scaleX(' + frac + ')' }, { transform: 'scaleX(0)' }], { duration: left, easing: 'linear', fill: 'forwards' });
+      });
+    }
+  }
+  window.island.onState(s => {
+    st = s;
+    document.documentElement.style.setProperty('--dot', s && s.color ? s.color : '#eceae4');
+    document.body.classList.toggle('collapsed', !!(s && s.collapsed));
+    paint();
+    if (!timer) timer = setInterval(paint, 1000);
+  });
+  // only the pill or the line catch clicks; everything around them stays clickable underneath
+  let over = false;
+  document.addEventListener('mousemove', e => {
+    const hit = !!e.target.closest('#pill:not(.gone), #line');
+    const visibleHit = hit && (document.body.classList.contains('collapsed') ? !!e.target.closest('#line') : !!e.target.closest('#pill'));
+    if (visibleHit !== over) { over = visibleHit; window.island.mouse(over); }
+  });
+  document.addEventListener('mouseleave', () => { if (over) { over = false; window.island.mouse(false); } });
+  $('pill').addEventListener('click', e => { if (!e.target.closest('.ib')) window.island.open(); });
+  $('collapse').addEventListener('click', e => { e.stopPropagation(); document.body.classList.add('collapsed'); window.island.collapse(true); });
+  $('close').addEventListener('click', e => { e.stopPropagation(); window.island.close(); });
+  $('line').addEventListener('click', () => { document.body.classList.remove('collapsed'); window.island.collapse(false); });
+})();
+</script>
+</body>
+</html>

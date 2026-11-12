@@ -1,0 +1,7 @@
+{
+  "name": "focus",
+  "productName": "Focus",
+  "version": "1.1.0",
+  "description": "Focus: meditation, study timer and dhikr",
+  "main": "main.js"
+}

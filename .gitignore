@@ -1,0 +1,8 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+Thumbs.db
+focus-backup-*.json
+still-backup-*.json
