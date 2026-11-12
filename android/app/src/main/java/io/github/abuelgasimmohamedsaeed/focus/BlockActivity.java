@@ -20,13 +20,14 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * The full block screen over an app whose time is up today, or that is cooling down.
+ * The full block screen over an app whose time is up today, that is cooling down, or that the clock keeps closed
+ * (outside its open hours, at bedtime, or at a prayer time).
  * Ways out, if you set them up on the App Time page: 5 more minutes after waiting 30 seconds or typing a sentence,
  * or an emergency unlock (a few per week).
  */
 public class BlockActivity extends Activity {
-    static final String EXTRA_PKG = "pkg", EXTRA_WHY = "why", EXTRA_VALUE = "value", EXTRA_LIMIT = "limit";
-    static final String LIMIT = "limit", COOLDOWN = "cooldown";
+    static final String EXTRA_PKG = "pkg", EXTRA_WHY = "why", EXTRA_VALUE = "value", EXTRA_LIMIT = "limit", EXTRA_PRAYER = "prayer";
+    static final String LIMIT = "limit", COOLDOWN = "cooldown", WINDOW = "window", BEDTIME = "bedtime", PRAYER = "prayer";
     private static final int BG = 0xFF09090B, FG = 0xFFECEAE4, MUTED = 0xFF8B8A86;
     private final Handler main = new Handler(Looper.getMainLooper());
     private String pkg;
@@ -84,6 +85,16 @@ public class BlockActivity extends Activity {
             long min = Math.max(1, (value + 59999) / 60000);
             add(text("Take a short break", 26, FG), 0);
             add(text(name + " opens again in " + min + " min.", 16, MUTED), 12);
+        } else if (WINDOW.equals(why)) {
+            add(text(name + " is closed now", 26, FG), 0);
+            add(text("It opens " + at(value) + ".", 16, MUTED), 12);
+        } else if (BEDTIME.equals(why)) {
+            add(text("Bedtime", 26, FG), 0);
+            add(text(name + " opens again " + at(value) + ". Sleep well.", 16, MUTED), 12);
+        } else if (PRAYER.equals(why)) {
+            String prayer = i.getStringExtra(EXTRA_PRAYER);
+            add(text("Time for " + (prayer == null ? "prayer" : prayer), 26, FG), 0);
+            add(text(name + " opens again " + at(value) + ".", 16, MUTED), 12);
         } else {
             long usedMin = Math.round(value / 60000.0);
             add(text(name + " is done for today", 26, FG), 0);
@@ -91,10 +102,12 @@ public class BlockActivity extends Activity {
         }
         add(button("Close it", true, v -> goHome()), 40);
 
-        if (LIMIT.equals(why)) {
-            String friction = Rules.friction(this);
-            if ("wait".equals(friction)) addWait();
-            else if ("type".equals(friction)) addType(name);
+        if (!COOLDOWN.equals(why)) {
+            if (LIMIT.equals(why)) {
+                String friction = Rules.friction(this);
+                if ("wait".equals(friction)) addWait();
+                else if ("type".equals(friction)) addType(name);
+            }
             int left = Rules.emergencyLeft(this);
             if (left > 0) {
                 add(link("Emergency: " + Rules.EMERGENCY_MIN + " minutes (" + left + " left this week)", v -> {
@@ -157,6 +170,14 @@ public class BlockActivity extends Activity {
             });
             in.requestFocus();
         });
+    }
+
+    /** "at 6:00 PM", or "tomorrow at 6:00 AM". */
+    private static String at(long when) {
+        java.util.Calendar a = java.util.Calendar.getInstance(), b = java.util.Calendar.getInstance();
+        b.setTimeInMillis(when);
+        String t = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(new java.util.Date(when));
+        return (a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR) ? "at " : "tomorrow at ") + t;
     }
 
     private void unlock() {

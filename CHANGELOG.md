@@ -1,5 +1,12 @@
 # Changelog
 
+## Android app (2026-11-13): App Time, stage 4
+- Open hours per app: tap a watched app, then Add hours (for example Snapchat only 7 to 8:30 AM and 6 to 9 PM). Outside them the app shows a block screen saying when it opens.
+- Bedtime: watched apps stay closed overnight (11 PM to 6 AM by default).
+- Prayer times: watched apps close at each adhan for 10 to 30 minutes. Times are calculated on the phone for Kuala Lumpur (JAKIM), Khartoum, Makkah (Umm al-Qura) or Cairo; today's times show on the page.
+- Emergency unlocks also work on these block screens (15 minutes).
+- With a delay set, turning off or changing bedtime, prayer times or an app's hours waits for the delay too.
+
 ## Android app (2026-11-13): PIN removed
 - The PIN to pause limits is gone, from the App Time page and the block screen.
 

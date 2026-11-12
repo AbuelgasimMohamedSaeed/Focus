@@ -16,6 +16,7 @@ public class FocusAccessibility extends AccessibilityService {
     static volatile FocusAccessibility instance;
     private final Handler main = new Handler(Looper.getMainLooper());
     private String front;
+    private long dueAt = Long.MAX_VALUE; // when the open app should be looked at again
     private final Runnable recheck = () -> { if (front != null) check(front); };
 
     @Override
@@ -30,9 +31,11 @@ public class FocusAccessibility extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || event.getPackageName() == null) return;
         String pkg = event.getPackageName().toString();
+        if (front != null && System.currentTimeMillis() >= dueAt) check(front); // the timer slept with the phone
         if (pkg.equals(home())) { // back on the home screen: no app is open
             leave();
             main.removeCallbacks(recheck);
+            dueAt = Long.MAX_VALUE;
             return;
         }
         if (pkg.equals(getPackageName()) || !AppUsage.apps(this).containsKey(pkg)) return; // keyboards, pop-ups, Focus itself
@@ -62,33 +65,50 @@ public class FocusAccessibility extends AccessibilityService {
         front = null;
     }
 
-    /** Block the app now if its time is up (or it is cooling down), or set one timer for the moment it will be. */
+    /**
+     * Block the app now if the clock keeps it closed (its hours, bedtime, prayer), it is cooling down or its time is up;
+     * otherwise set one timer for the first moment one of those will happen.
+     */
     private void check(String pkg) {
         main.removeCallbacks(recheck);
+        dueAt = Long.MAX_VALUE;
         if (Rules.trackOnly(this)) return;
+        long now = System.currentTimeMillis();
+        Rules.Shut shut = Rules.shut(this, pkg, now);
+        if (shut != null) {
+            block(pkg, shut.why, shut.until, 0, shut.prayer);
+            return;
+        }
+        long next = Rules.nextShut(this, pkg, now);
         int limit = Rules.limit(this, pkg);
-        if (limit <= 0) return;
-        long cool = Rules.cooldownLeft(this, pkg);
-        if (cool > 0) {
-            block(pkg, BlockActivity.COOLDOWN, cool, limit);
-            return;
+        if (limit > 0) {
+            long cool = Rules.cooldownLeft(this, pkg);
+            if (cool > 0) {
+                block(pkg, BlockActivity.COOLDOWN, cool, limit, "");
+                return;
+            }
+            long used = AppUsage.usedToday(this, pkg), left = limit * 60000L - used;
+            if (left <= 0) {
+                block(pkg, BlockActivity.LIMIT, used, limit, "");
+                return;
+            }
+            next = Math.min(next, left);
         }
-        long used = AppUsage.usedToday(this, pkg), left = limit * 60000L - used;
-        if (left > 0) {
-            main.postDelayed(recheck, left + 1500);
-            return;
-        }
-        block(pkg, BlockActivity.LIMIT, used, limit);
+        if (next == Long.MAX_VALUE) return;
+        dueAt = now + next + 1500;
+        main.postDelayed(recheck, next + 1500);
     }
 
-    private void block(String pkg, String why, long value, int limit) {
+    private void block(String pkg, String why, long value, int limit, String prayer) {
         front = null; // so coming back to it checks again
+        dueAt = Long.MAX_VALUE;
         startActivity(new Intent(this, BlockActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 .putExtra(BlockActivity.EXTRA_PKG, pkg)
                 .putExtra(BlockActivity.EXTRA_WHY, why)
                 .putExtra(BlockActivity.EXTRA_VALUE, value)
-                .putExtra(BlockActivity.EXTRA_LIMIT, limit));
+                .putExtra(BlockActivity.EXTRA_LIMIT, limit)
+                .putExtra(BlockActivity.EXTRA_PRAYER, prayer));
     }
 
     /** After an unlock: the app is open again, so time it from now. */

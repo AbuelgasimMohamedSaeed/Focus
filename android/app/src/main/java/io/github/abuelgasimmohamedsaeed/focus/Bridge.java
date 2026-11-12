@@ -99,6 +99,15 @@ final class Bridge {
         FocusAccessibility.rulesChanged();
     }
 
+    /** Today's five adhan times (minutes after midnight) for this place and method, to show on the page. */
+    @JavascriptInterface
+    public String prayerTimes(double lat, double lng, double fajr, double isha, int ishaMin) {
+        int[] t = Prayer.today(lat, lng, fajr, isha, ishaMin);
+        org.json.JSONArray a = new org.json.JSONArray();
+        for (int m : t) a.put(m);
+        return a.toString();
+    }
+
     /** {pendingAt, emergencyLeft} for the App Time page. */
     @JavascriptInterface
     public String rulesStatus() {
