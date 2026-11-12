@@ -22,7 +22,7 @@ import android.widget.TextView;
 /**
  * The full block screen over an app whose time is up today, or that is cooling down.
  * Ways out, if you set them up on the App Time page: 5 more minutes after waiting 30 seconds or typing a sentence,
- * an emergency unlock (a few per week), or a pause with your PIN.
+ * or an emergency unlock (a few per week).
  */
 public class BlockActivity extends Activity {
     static final String EXTRA_PKG = "pkg", EXTRA_WHY = "why", EXTRA_VALUE = "value", EXTRA_LIMIT = "limit";
@@ -103,7 +103,6 @@ public class BlockActivity extends Activity {
                 }), 18);
             }
         }
-        if (Rules.hasPin(this)) addPin();
 
         setContentView(scroll);
         getWindow().setDecorFitsSystemWindows(false);
@@ -156,30 +155,6 @@ public class BlockActivity extends Activity {
                     go.setAlpha(ok ? 1f : .4f);
                 }
             });
-            in.requestFocus();
-        });
-    }
-
-    /** A friend can pause all limits for an hour with the PIN. */
-    private void addPin() {
-        TextView l = link("Pause limits with PIN", null);
-        add(l, 18);
-        l.setOnClickListener(v -> {
-            l.setVisibility(View.GONE);
-            EditText in = field(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-            in.setHint("PIN");
-            add(in, 10);
-            TextView msg = text("", 13, MUTED);
-            add(button("Pause for 1 hour", false, x -> {
-                if (Rules.pinMatches(this, in.getText().toString())) {
-                    Rules.pause(this, Rules.PAUSE_MIN);
-                    reopen();
-                } else {
-                    msg.setText("That PIN isn't right.");
-                    in.setText("");
-                }
-            }), 10);
-            add(msg, 8);
             in.requestFocus();
         });
     }

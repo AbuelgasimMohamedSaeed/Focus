@@ -66,10 +66,6 @@ public class FocusAccessibility extends AccessibilityService {
     private void check(String pkg) {
         main.removeCallbacks(recheck);
         if (Rules.trackOnly(this)) return;
-        if (Rules.paused(this)) { // paused with the PIN: look again when the pause ends
-            main.postDelayed(recheck, Rules.pausedUntil(this) - System.currentTimeMillis() + 1500);
-            return;
-        }
         int limit = Rules.limit(this, pkg);
         if (limit <= 0) return;
         long cool = Rules.cooldownLeft(this, pkg);

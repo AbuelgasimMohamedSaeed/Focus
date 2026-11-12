@@ -6,8 +6,6 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
@@ -21,11 +19,10 @@ import java.util.Locale;
  *   emergency  emergency unlocks allowed per 7 days (15 minutes each, no friction)
  *   cooldown   minutes an app stays closed after you leave it
  *   delay      minutes before a change that loosens the rules takes effect
- *   pin        SHA-256 of "focus:" + PIN, used to pause limits for an hour
  * Tightening applies at once; loosening waits for the delay, so turning limits off in a weak moment doesn't work instantly.
  */
 final class Rules {
-    static final int EXTRA_MIN = 5, EMERGENCY_MIN = 15, PAUSE_MIN = 60;
+    static final int EXTRA_MIN = 5, EMERGENCY_MIN = 15;
     private static JSONObject current;
 
     private Rules() {}
@@ -89,8 +86,7 @@ final class Rules {
         return frictionLevel(b.optString("friction")) < frictionLevel(a.optString("friction"))
                 || b.optInt("emergency", 0) > a.optInt("emergency", 0)
                 || b.optInt("cooldown", 0) < a.optInt("cooldown", 0)
-                || b.optInt("delay", 0) < a.optInt("delay", 0)
-                || (!b.optString("pin").equals(a.optString("pin")) && !a.optString("pin").isEmpty());
+                || b.optInt("delay", 0) < a.optInt("delay", 0);
     }
 
     static long pendingAt(Context c) {
@@ -108,25 +104,6 @@ final class Rules {
 
     static int cooldown(Context c) {
         return get(c).optInt("cooldown", 0);
-    }
-
-    static boolean hasPin(Context c) {
-        return !get(c).optString("pin").isEmpty();
-    }
-
-    static boolean pinMatches(Context c, String pin) {
-        return hasPin(c) && get(c).optString("pin").equals(hash(pin));
-    }
-
-    static String hash(String pin) {
-        try {
-            byte[] d = MessageDigest.getInstance("SHA-256").digest(("focus:" + pin).getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : d) sb.append(String.format(Locale.US, "%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
-            return "";
-        }
     }
 
     /** The daily limit in minutes for today, including unlocked extra time; 0 = no limit. */
@@ -185,18 +162,6 @@ final class Rules {
         grant(c, pkg, EMERGENCY_MIN);
     }
 
-    static long pausedUntil(Context c) {
-        return prefs(c).getLong("pausedUntil", 0);
-    }
-
-    static boolean paused(Context c) {
-        return System.currentTimeMillis() < pausedUntil(c);
-    }
-
-    static void pause(Context c, int minutes) {
-        prefs(c).edit().putLong("pausedUntil", minutes <= 0 ? 0 : System.currentTimeMillis() + minutes * 60000L).apply();
-    }
-
     /** When you last left each app, for the cooldown. */
     static void left(Context c, String pkg) {
         prefs(c).edit().putLong("left:" + pkg, System.currentTimeMillis()).apply();
@@ -210,11 +175,10 @@ final class Rules {
         return Math.max(0, at);
     }
 
-    /** For the page: {pendingAt, pausedUntil, emergencyLeft}. */
+    /** For the page: {pendingAt, emergencyLeft}. */
     static String status(Context c) {
         try {
-            return new JSONObject().put("pendingAt", pendingAt(c)).put("pausedUntil", pausedUntil(c))
-                    .put("emergencyLeft", emergencyLeft(c)).toString();
+            return new JSONObject().put("pendingAt", pendingAt(c)).put("emergencyLeft", emergencyLeft(c)).toString();
         } catch (Exception e) {
             return "{}";
         }

@@ -600,9 +600,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
           <div class="seg small" data-rule="cooldown"><button data-v="0">Off</button><button data-v="5">5m</button><button data-v="10">10m</button><button data-v="15">15m</button></div></div>
         <div class="rule"><span>Delay before loosening<small>Turning limits down or off only takes effect after this</small></span>
           <div class="seg small" data-rule="delay"><button data-v="0">Off</button><button data-v="10">10m</button><button data-v="30">30m</button><button data-v="60">1h</button></div></div>
-        <div class="rule"><span>PIN to pause limits<small id="pinState">For you, or a friend using this phone: pauses limits for an hour</small></span>
-          <div class="pin-row"><input id="pinIn" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off" aria-label="PIN">
-            <button class="mini" id="pinA"></button><button class="mini" id="pinB"></button></div></div>
       </div>
     </div>
   </section>
@@ -1964,12 +1961,13 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   const AT_OK = ANDROID && !!(window.FocusAndroid && FocusAndroid.appUsage);
   if (!S.appTime) S.appTime = { on: true, watched: [] };
   const AT = S.appTime;
+  delete AT.pin; // the PIN was removed
   AT.limits = AT.limits || {};
   // the Android side blocks apps, so it gets a copy of the rules whenever they change
   function pushRules() {
     try {
       if (AT_OK && FocusAndroid.setAppRules) FocusAndroid.setAppRules(JSON.stringify({ track: !!AT.trackOnly, limits: AT.limits,
-        friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0, pin: AT.pin || '' }));
+        friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0 }));
     } catch (e) {}
   }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
@@ -2033,12 +2031,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('atTrack').setAttribute('aria-checked', String(!!AT.trackOnly));
     paintRules();
   }
-  // ---- stage 3: unlocks, emergencies, breaks, delay and PIN
+  // ---- stage 3: unlocks, emergencies, breaks and delay
   const hhmm = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-  async function pinHash(pin) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('focus:' + pin));
-    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-  }
   function rulesStatus() { try { return JSON.parse(FocusAndroid.rulesStatus()); } catch (e) { return {}; } }
   function paintRules() {
     $('atRules').hidden = !!AT.trackOnly;
@@ -2047,14 +2041,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
     });
     const st = rulesStatus(), now = Date.now(), lines = [];
-    if (st.pausedUntil > now) lines.push('Limits are paused until ' + hhmm(st.pausedUntil) + '.');
     if (st.pendingAt > now) lines.push('Your looser settings take effect at ' + hhmm(st.pendingAt) + '.');
     $('atStatus').hidden = !lines.length; $('atStatus').textContent = lines.join(' ');
-    const paused = st.pausedUntil > now;
-    $('pinIn').hidden = !!paused;
-    $('pinA').textContent = paused ? 'Resume limits' : AT.pin ? 'Pause 1 hour' : 'Set PIN';
-    $('pinB').hidden = paused || !AT.pin; $('pinB').textContent = 'Change PIN';
-    $('pinState').textContent = AT.pin ? 'Enter your PIN to pause limits for an hour, or to change it' : 'For you, or a friend using this phone: pauses limits for an hour';
   }
   function atToggle(pkg, on) {
     const i = AT.watched.indexOf(pkg);
@@ -2129,21 +2117,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       const k = b.closest('[data-rule]').dataset.rule;
       AT[k] = k === 'friction' ? b.dataset.v : +b.dataset.v;
       save(); pushRules(); paintRules();
-    });
-    $('pinA').addEventListener('click', async () => {
-      const st = rulesStatus(), pin = $('pinIn').value.trim();
-      if (st.pausedUntil > Date.now()) { FocusAndroid.pauseLimits(0); paintRules(); toast('Limits are back on'); return; }
-      if (!/^\d{4,8}$/.test(pin)) { toast('Use 4 to 8 digits'); return; }
-      const h = await pinHash(pin);
-      $('pinIn').value = '';
-      if (!AT.pin) { AT.pin = h; save(); pushRules(); paintRules(); toast('PIN saved. Don\u2019t forget it.'); return; }
-      if (h !== AT.pin) { toast('That PIN isn\u2019t right'); return; }
-      FocusAndroid.pauseLimits(60); paintRules(); toast('Limits paused for an hour');
-    });
-    $('pinB').addEventListener('click', async () => {
-      const pin = $('pinIn').value.trim();
-      if (!pin || (await pinHash(pin)) !== AT.pin) { toast('Enter your current PIN first'); return; }
-      AT.pin = ''; $('pinIn').value = ''; save(); pushRules(); paintRules(); toast('Now type a new PIN and tap Set PIN');
     });
     pushRules();
     [$('atWatched'), $('atOthers'), $('atAll')].forEach(list => list.addEventListener('click', e => {
