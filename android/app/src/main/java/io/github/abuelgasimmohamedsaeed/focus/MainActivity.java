@@ -207,14 +207,14 @@ public class MainActivity extends Activity {
     void askLine() {
         if (isFinishing() || isDestroyed()) return;
         new AlertDialog.Builder(this)
-                .setTitle("Line at the top of the screen")
-                .setMessage("While you sit with Focus closed, a thin line along the very top of the screen shows the time left. "
-                        + "To draw over the clock and battery, Focus needs Accessibility.\n\n"
+                .setTitle("Turn on Accessibility for Focus")
+                .setMessage("Focus uses it for two things: the line along the very top of the screen that shows your time left, "
+                        + "and App Time's block screen when an app's daily time is up.\n\n"
                         + "1. Tap Open settings.\n"
                         + "2. Find Focus (on Xiaomi: under Downloaded apps) and turn it on.\n\n"
                         + "If Android says it is a restricted setting: open Focus's App info, tap \u22ee at the top right, "
                         + "choose Allow restricted settings, and try again.\n\n"
-                        + "Focus does not read anything on your screen.")
+                        + "Focus only sees which app is open, never what is on the screen.")
                 .setPositiveButton("Open settings", (d, w) -> {
                     try {
                         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));

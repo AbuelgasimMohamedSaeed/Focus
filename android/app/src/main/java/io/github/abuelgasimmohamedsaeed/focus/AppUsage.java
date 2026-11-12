@@ -55,6 +55,31 @@ final class AppUsage {
     static String today(Context c) {
         JSONArray out = new JSONArray();
         if (!allowed(c)) return out.toString();
+        Map<String, long[]> use = usage(c);
+        Map<String, String> apps = launchable(c);
+        List<Map.Entry<String, long[]>> rows = new ArrayList<>(use.entrySet());
+        rows.sort((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]));
+        for (Map.Entry<String, long[]> r : rows) {
+            String name = apps.get(r.getKey());
+            if (name == null || (r.getValue()[0] < 1000 && r.getValue()[1] == 0)) continue;
+            try {
+                out.put(new JSONObject().put("pkg", r.getKey()).put("name", name)
+                        .put("ms", r.getValue()[0]).put("opens", r.getValue()[1]));
+            } catch (Exception ignored) {
+            }
+        }
+        return out.toString();
+    }
+
+    /** Milliseconds this app has been on screen today. */
+    static long usedToday(Context c, String pkg) {
+        if (!allowed(c)) return 0;
+        long[] v = usage(c).get(pkg);
+        return v == null ? 0 : v[0];
+    }
+
+    /** package -> {milliseconds on screen today, opens today} */
+    private static Map<String, long[]> usage(Context c) {
         long now = System.currentTimeMillis();
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -99,20 +124,25 @@ final class AppUsage {
             }
         }
         if (current != null) add(use, current, since, now, start);
+        return use;
+    }
 
-        Map<String, String> apps = launchable(c);
-        List<Map.Entry<String, long[]>> rows = new ArrayList<>(use.entrySet());
-        rows.sort((a, b) -> Long.compare(b.getValue()[0], a.getValue()[0]));
-        for (Map.Entry<String, long[]> r : rows) {
-            String name = apps.get(r.getKey());
-            if (name == null || (r.getValue()[0] < 1000 && r.getValue()[1] == 0)) continue;
-            try {
-                out.put(new JSONObject().put("pkg", r.getKey()).put("name", name)
-                        .put("ms", r.getValue()[0]).put("opens", r.getValue()[1]));
-            } catch (Exception ignored) {
-            }
+    private static Map<String, String> appsCache;
+    private static long appsAt;
+
+    /** Apps with a home-screen icon (package -> name), refreshed every 10 minutes. */
+    static synchronized Map<String, String> apps(Context c) {
+        long now = System.currentTimeMillis();
+        if (appsCache == null || now - appsAt > 600_000L) {
+            appsCache = launchable(c);
+            appsAt = now;
         }
-        return out.toString();
+        return appsCache;
+    }
+
+    static String name(Context c, String pkg) {
+        String n = apps(c).get(pkg);
+        return n == null ? pkg : n;
     }
 
     /** Every app with a home-screen icon: [{pkg, name}], A to Z. */

@@ -1,5 +1,11 @@
 # Changelog
 
+## Android app 1.7 (2026-11-13): App Time, stage 2
+- Daily limit per watched app (tap the app on the App Time page): 10 minutes to 2 hours.
+- When an app's time is up, a full block screen covers it until tomorrow; Back and "Close it" go to the home screen.
+- Track only switch: keep the numbers, block nothing.
+- Uses the same Accessibility permission as the top line. It only sees which app is open, and sets one timer per opened app, so it costs almost no battery.
+
 ## 1.3.0 (2026-11-13)
 - Labels: one small chip at the top left of Sit. Tap it to choose a label, add one with its own color, or delete one. Someone new starts with Study, Work and Reading.
 - Sit shows only the time and Start; bell sound, interval bell and count up/down moved to the settings button next to Start.

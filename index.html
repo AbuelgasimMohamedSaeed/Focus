@@ -220,6 +220,7 @@ body.dz-hit .counter.done .of{color:var(--muted)}
 .at-bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
 .at-bar i{display:block;height:100%;background:var(--fg);border-radius:2px;transform-origin:left;transition:width .4s var(--ease)}
 .at-add{margin-top:14px;width:100%}
+.at-list li.at-tap{cursor:pointer}
 .at-pick{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding:18px max(16px,env(safe-area-inset-left,0px)) 0}
 .at-pick header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .at-pick h2{margin:0;font-size:22px;letter-spacing:-.02em}
@@ -432,6 +433,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   <header><h2>Dhikr history</h2><button class="mini" id="dzSheetDone">Done</button></header>
   <ol class="log dz-hist" id="dzHist"></ol>
 </div>
+<div class="at-pick sheet" id="atLimitSheet" hidden>
+  <header><h2 id="atLimitName">Daily limit</h2><button class="mini" id="atLimitDone">Done</button></header>
+  <p class="note" style="margin:10px 0 18px">When the time is up, the app shows a block screen until tomorrow.</p>
+  <div class="seg small" id="atLimitSeg" role="group" aria-label="Daily limit" style="justify-content:flex-start">
+    <button data-min="0">No limit</button><button data-min="10">10m</button><button data-min="15">15m</button><button data-min="30">30m</button>
+    <button data-min="45">45m</button><button data-min="60">1h</button><button data-min="90">1h 30m</button><button data-min="120">2h</button>
+  </div>
+</div>
 <div class="at-pick" id="atPick" hidden>
   <header><h2>Apps to watch</h2><button class="mini" id="atPickDone">Done</button></header>
   <input class="at-search" id="atSearch" type="search" placeholder="Search apps" autocomplete="off" aria-label="Search apps">
@@ -599,11 +608,19 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       <p class="note" style="margin:0">Your app time stays on this device. Focus only reads which apps were open and for how long.</p>
     </div>
     <div id="atBody" hidden>
+      <div class="at-perm" id="atNeedAcc" hidden>
+        <b>Limits need Accessibility</b>
+        <p class="note" style="margin:0">Without it, Focus can't notice when you open an app whose time is up, so nothing gets blocked.</p>
+        <button class="pill" id="atAccBtn">Set up</button>
+      </div>
       <div class="label">Watching</div>
+      <p class="note" id="atTip" style="margin:-4px 0 4px">Tap an app to give it a daily limit.</p>
       <ul class="at-list" id="atWatched"></ul>
       <button class="mini at-add" id="atAdd">Add an app to watch</button>
       <div class="label">Everything else today</div>
       <ul class="at-list" id="atOthers"></ul>
+      <div class="set-row" style="margin-top:18px"><span>Track only<small>No limits and nothing blocked, just the numbers</small></span>
+        <button class="switch" id="atTrack" role="switch" aria-checked="false" aria-label="Track only"></button></div>
     </div>
   </section>
 
@@ -1863,6 +1880,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   const AT_OK = ANDROID && !!(window.FocusAndroid && FocusAndroid.appUsage);
   if (!S.appTime) S.appTime = { on: true, watched: [] };
   const AT = S.appTime;
+  AT.limits = AT.limits || {};
+  // the Android side blocks apps, so it gets a copy of the rules whenever they change
+  function pushRules() {
+    try { if (AT_OK && FocusAndroid.setAppRules) FocusAndroid.setAppRules(JSON.stringify({ track: !!AT.trackOnly, limits: AT.limits })); } catch (e) {}
+  }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
   const opensTxt = n => n + (n === 1 ? ' open' : ' opens');
   let atNames = null; // package -> name, for watched apps that weren't used today
@@ -1887,9 +1909,12 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   }
   const atImg = pkg => '<img class="at-ic" alt="" ' + (atIcons[pkg] ? 'src="' + atIcons[pkg] + '"' : 'data-ic="' + esc(pkg) + '"') + '>';
   function atRow(a, max, btn) {
-    return '<li>' + atImg(a.pkg) + '<span class="at-mid"><span class="at-name">' + esc(a.name) + '</span>' +
-      '<span class="at-meta">' + fmtUse(a.ms) + ' · ' + opensTxt(a.opens) + '</span>' +
-      '<span class="at-bar"><i style="width:' + (max ? Math.max(1, Math.round(a.ms / max * 100)) : 0) + '%"></i></span></span>' +
+    const lim = btn === 'remove' && !AT.trackOnly ? (AT.limits[a.pkg] || 0) : 0, full = lim ? lim * 60000 : max;
+    const pct = full ? Math.min(100, Math.max(1, Math.round(a.ms / full * 100))) : 0, over = lim && a.ms >= full;
+    return '<li' + (btn === 'remove' ? ' class="at-tap" data-limit="' + esc(a.pkg) + '" data-name="' + esc(a.name) + '"' : '') + '>' +
+      atImg(a.pkg) + '<span class="at-mid"><span class="at-name">' + esc(a.name) + '</span>' +
+      '<span class="at-meta">' + fmtUse(a.ms) + (lim ? ' of ' + fmtUse(full) + (over ? " · time's up" : '') : '') + ' · ' + opensTxt(a.opens) + '</span>' +
+      '<span class="at-bar"><i style="width:' + pct + '%' + (over ? ';background:#e66767' : '') + '"></i></span></span>' +
       '<button class="del" data-pkg="' + esc(a.pkg) + '" data-act="' + btn + '">' + (btn === 'watch' ? 'Watch' : 'Remove') + '</button></li>';
   }
   function paintAppTime() {
@@ -1913,12 +1938,18 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       : '<li class="empty">No apps watched yet. Tap <b>Watch</b> next to an app below, or add one.</li>';
     $('atOthers').innerHTML = others.length ? others.map(a => atRow(a, max, 'watch')).join('') : '<li class="empty">Nothing else used today.</li>';
     atFillIcons($('atBody'));
+    const anyLimit = !AT.trackOnly && AT.watched.some(p => AT.limits[p]);
+    let acc = true;
+    try { acc = !FocusAndroid.lineReady || FocusAndroid.lineReady(); } catch (e) {}
+    $('atNeedAcc').hidden = !anyLimit || acc;
+    $('atTip').hidden = !watched.length || !!AT.trackOnly;
+    $('atTrack').setAttribute('aria-checked', String(!!AT.trackOnly));
   }
   function atToggle(pkg, on) {
     const i = AT.watched.indexOf(pkg);
     if (on && i < 0) AT.watched.push(pkg);
-    if (!on && i >= 0) AT.watched.splice(i, 1);
-    save();
+    if (!on && i >= 0) { AT.watched.splice(i, 1); delete AT.limits[pkg]; }
+    save(); pushRules();
   }
   function atPaintPicker() {
     const q = $('atSearch').value.trim().toLowerCase(), all = atAllApps();
@@ -1962,6 +1993,27 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     $('atAdd').addEventListener('click', () => { atNames = null; $('atSearch').value = ''; $('atPick').hidden = false; atPaintPicker(); });
     $('atPickDone').addEventListener('click', () => { $('atPick').hidden = true; paintAppTime(); });
     $('atSearch').addEventListener('input', atPaintPicker);
+    // daily limit per watched app
+    let limPkg = '';
+    const paintLimit = () => $('atLimitSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === (AT.limits[limPkg] || 0)));
+    $('atWatched').addEventListener('click', e => {
+      if (e.target.closest('button')) return;
+      const li = e.target.closest('li[data-limit]');
+      if (!li || AT.trackOnly) return;
+      limPkg = li.dataset.limit; $('atLimitName').textContent = li.dataset.name; paintLimit(); $('atLimitSheet').hidden = false;
+    });
+    $('atLimitSeg').addEventListener('click', e => {
+      const b = e.target.closest('button[data-min]');
+      if (!b) return;
+      const m = +b.dataset.min;
+      if (m) AT.limits[limPkg] = m; else delete AT.limits[limPkg];
+      save(); pushRules(); paintLimit();
+      setTimeout(() => { $('atLimitSheet').hidden = true; paintAppTime(); }, 180);
+    });
+    $('atLimitDone').addEventListener('click', () => { $('atLimitSheet').hidden = true; paintAppTime(); });
+    $('atTrack').addEventListener('click', () => { AT.trackOnly = !AT.trackOnly; save(); pushRules(); paintAppTime(); });
+    $('atAccBtn').addEventListener('click', () => { try { FocusAndroid.setupLine(); } catch (e) {} });
+    pushRules();
     [$('atWatched'), $('atOthers'), $('atAll')].forEach(list => list.addEventListener('click', e => {
       const b = e.target.closest('button[data-pkg]');
       if (!b) return;

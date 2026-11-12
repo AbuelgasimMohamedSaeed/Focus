@@ -92,6 +92,13 @@ final class Bridge {
         return AppUsage.installed(app);
     }
 
+    /** App Time rules from the page: {"track": true|false, "limits": {"package": minutes}}. */
+    @JavascriptInterface
+    public void setAppRules(String json) {
+        Rules.save(app, json);
+        FocusAccessibility.rulesChanged();
+    }
+
     @JavascriptInterface
     public String appIcon(String pkg) {
         return AppUsage.icon(app, pkg);
