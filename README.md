@@ -49,7 +49,7 @@
 ## Install
 
 ### Android tablet / phone
-1. Open **https://abuelgasimmohamedsaeed.github.io/focus/** in Chrome or Samsung Internet.
+1. Open **https://abuelgasimmohamedsaeed.github.io/Focus/** in Chrome or Samsung Internet.
 2. Menu → **Add to Home screen** / **Install app**.
 3. Focus opens full-screen like a normal app and works offline.
 
