@@ -66,20 +66,30 @@ public class FocusAccessibility extends AccessibilityService {
     }
 
     /**
-     * Block the app now if the clock keeps it closed (its hours, bedtime, prayer), it is cooling down or its time is up;
+     * Show the prayer reminder if an adhan has come; block the app if the clock keeps it closed (its hours, bedtime),
+     * it is cooling down or its time is up;
      * otherwise set one timer for the first moment one of those will happen.
      */
     private void check(String pkg) {
         main.removeCallbacks(recheck);
         dueAt = Long.MAX_VALUE;
-        if (Rules.trackOnly(this)) return;
         long now = System.currentTimeMillis();
+        String prayer = Rules.prayerDue(this, now);
+        if (prayer != null) { // the adhan has come: a reminder over any app, until "I understand"
+            block(pkg, BlockActivity.PRAYER, now, 0, prayer);
+            return;
+        }
+        long next = Rules.nextPrayer(this, now);
+        if (Rules.trackOnly(this)) {
+            schedule(now, next);
+            return;
+        }
         Rules.Shut shut = Rules.shut(this, pkg, now);
         if (shut != null) {
             block(pkg, shut.why, shut.until, 0, shut.prayer);
             return;
         }
-        long next = Rules.nextShut(this, pkg, now);
+        next = Math.min(next, Rules.nextShut(this, pkg, now));
         int limit = Rules.limit(this, pkg);
         if (limit > 0) {
             long cool = Rules.cooldownLeft(this, pkg);
@@ -94,6 +104,10 @@ public class FocusAccessibility extends AccessibilityService {
             }
             next = Math.min(next, left);
         }
+        schedule(now, next);
+    }
+
+    private void schedule(long now, long next) {
         if (next == Long.MAX_VALUE) return;
         dueAt = now + next + 1500;
         main.postDelayed(recheck, next + 1500);

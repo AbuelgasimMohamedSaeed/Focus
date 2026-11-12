@@ -21,7 +21,7 @@ import android.widget.TextView;
 
 /**
  * The full block screen over an app whose time is up today, that is cooling down, or that the clock keeps closed
- * (outside its open hours, at bedtime, or at a prayer time).
+ * (outside its open hours, or at bedtime). At a prayer time it is only a reminder: "I understand" goes back to the app.
  * Ways out, if you set them up on the App Time page: 5 more minutes after waiting 30 seconds or typing a sentence,
  * or an emergency unlock (a few per week).
  */
@@ -29,6 +29,14 @@ public class BlockActivity extends Activity {
     static final String EXTRA_PKG = "pkg", EXTRA_WHY = "why", EXTRA_VALUE = "value", EXTRA_LIMIT = "limit", EXTRA_PRAYER = "prayer";
     static final String LIMIT = "limit", COOLDOWN = "cooldown", WINDOW = "window", BEDTIME = "bedtime", PRAYER = "prayer";
     private static final int BG = 0xFF09090B, FG = 0xFFECEAE4, MUTED = 0xFF8B8A86;
+    private static final java.util.Map<String, String> ARABIC = new java.util.HashMap<>();
+    static {
+        ARABIC.put("Fajr", "\u0627\u0644\u0641\u062c\u0631");
+        ARABIC.put("Dhuhr", "\u0627\u0644\u0638\u0647\u0631");
+        ARABIC.put("Asr", "\u0627\u0644\u0639\u0635\u0631");
+        ARABIC.put("Maghrib", "\u0627\u0644\u0645\u063a\u0631\u0628");
+        ARABIC.put("Isha", "\u0627\u0644\u0639\u0634\u0627\u0621");
+    }
     private final Handler main = new Handler(Looper.getMainLooper());
     private String pkg;
     private float d;
@@ -93,8 +101,16 @@ public class BlockActivity extends Activity {
             add(text(name + " opens again " + at(value) + ". Sleep well.", 16, MUTED), 12);
         } else if (PRAYER.equals(why)) {
             String prayer = i.getStringExtra(EXTRA_PRAYER);
-            add(text("Time for " + (prayer == null ? "prayer" : prayer), 26, FG), 0);
-            add(text(name + " opens again " + at(value) + ".", 16, MUTED), 12);
+            add(text(ARABIC.containsKey(prayer) ? "\u062d\u0627\u0646 \u0648\u0642\u062a \u0635\u0644\u0627\u0629 " + ARABIC.get(prayer) : "", 20, MUTED), 0);
+            add(text("Time for " + (prayer == null ? "prayer" : prayer), 28, FG), 8);
+            add(text("The adhan has come. " + name + " will be here after you pray.", 16, MUTED), 12);
+            add(button("I understand", true, v -> {
+                Rules.ackPrayer(this);
+                reopen();
+            }), 40);
+            setContentView(scroll);
+            getWindow().setDecorFitsSystemWindows(false);
+            return;
         } else {
             long usedMin = Math.round(value / 60000.0);
             add(text(name + " is done for today", 26, FG), 0);

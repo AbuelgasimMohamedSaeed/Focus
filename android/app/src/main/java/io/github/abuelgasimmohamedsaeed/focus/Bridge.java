@@ -99,13 +99,24 @@ final class Bridge {
         FocusAccessibility.rulesChanged();
     }
 
-    /** Today's five adhan times (minutes after midnight) for this place and method, to show on the page. */
+    /** {name, gps, allowed, times: [five adhan times in minutes after midnight]} for the App Time page. */
     @JavascriptInterface
-    public String prayerTimes(double lat, double lng, double fajr, double isha, int ishaMin) {
-        int[] t = Prayer.today(lat, lng, fajr, isha, ishaMin);
-        org.json.JSONArray a = new org.json.JSONArray();
-        for (int m : t) a.put(m);
-        return a.toString();
+    public String prayerInfo() {
+        try {
+            org.json.JSONObject p = Place.get(app);
+            org.json.JSONArray a = new org.json.JSONArray();
+            for (int m : Rules.prayers(app)) a.put(m);
+            return new org.json.JSONObject().put("name", p.optString("name")).put("gps", p.optBoolean("gps"))
+                    .put("allowed", Place.allowed(app)).put("times", a).toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /** Ask for location (rough is enough), then take a fresh position; the page hears focusPlaceChanged(). */
+    @JavascriptInterface
+    public void askLocation() {
+        activity.runOnUiThread(activity::askLocation);
     }
 
     /** {pendingAt, emergencyLeft} for the App Time page. */

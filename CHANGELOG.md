@@ -1,5 +1,10 @@
 # Changelog
 
+## Android app (2026-11-13): prayer reminder
+- Prayer time is now a reminder, not a block: at each adhan, whatever app you're in stops with "Time for Asr" until you tap "I understand", then it carries on. One tap per prayer.
+- It works with Track only too, and covers every app, not only watched ones.
+- Prayer times follow your location (rough location, refreshed at most every 6 hours when you open Focus). Without location, Focus uses the city that matches your phone's time zone. The method (JAKIM, Egyptian, Umm al-Qura, Gulf, Turkey, Karachi, MWL, ISNA) is the one used in the nearest listed city.
+
 ## Android app (2026-11-13): App Time, stage 4
 - Open hours per app: tap a watched app, then Add hours (for example Snapchat only 7 to 8:30 AM and 6 to 9 PM). Outside them the app shows a block screen saying when it opens.
 - Bedtime: watched apps stay closed overnight (11 PM to 6 AM by default).

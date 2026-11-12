@@ -23,7 +23,8 @@ import java.util.Locale;
  *   watched    the apps on the watch list: bedtime and prayer times close these
  *   windows    {package: [{from, to}]} minutes after midnight: the app opens only in these hours
  *   bedtime    {from, to} or null: watched apps closed in these hours
- *   prayer     {lat, lng, fajr, isha, ishaMin, after} or null: watched apps closed from each adhan for `after` minutes
+ *   prayer     {} or null: at each adhan, whatever app is open shows a reminder until you tap "I understand"
+ *              (where: see Place; it works with Track only too, since it blocks nothing)
  * Tightening applies at once; loosening waits for the delay, so turning limits off in a weak moment doesn't work instantly.
  */
 final class Rules {
@@ -114,9 +115,9 @@ final class Rules {
         return false;
     }
 
-    /** An app left the watch list while bedtime or prayer times were closing it. */
+    /** An app left the watch list while bedtime was closing it. */
     private static boolean unwatched(JSONObject a, JSONObject b) {
-        if (a.optJSONObject("bedtime") == null && a.optJSONObject("prayer") == null) return false;
+        if (a.optJSONObject("bedtime") == null) return false;
         JSONArray wa = a.optJSONArray("watched");
         if (wa == null) return false;
         for (int i = 0; i < wa.length(); i++) if (!watched(b, wa.optString(i))) return true;
@@ -254,8 +255,9 @@ final class Rules {
     private static String prayerKey;
     private static int[] prayerTimes;
 
-    /** Today's adhan times in minutes after midnight, worked out once a day. */
-    static synchronized int[] prayers(JSONObject p) {
+    /** Today's adhan times in minutes after midnight for where the phone is, worked out once a day per place. */
+    static synchronized int[] prayers(Context c) {
+        JSONObject p = Place.get(c);
         String key = today() + p.toString();
         if (!key.equals(prayerKey)) {
             prayerTimes = Prayer.today(p.optDouble("lat", 3.139), p.optDouble("lng", 101.687),
@@ -265,7 +267,36 @@ final class Rules {
         return prayerTimes;
     }
 
-    /** The app is closed by the clock now (outside its hours, bedtime, prayer), or null. */
+    /** The prayer whose adhan has come and that you haven't tapped "I understand" for yet, or null. */
+    static String prayerDue(Context c, long now) {
+        if (get(c).optJSONObject("prayer") == null) return null;
+        int[] t = prayers(c);
+        long m = msOfDay(now) / 60000;
+        int i = -1;
+        for (int k = 0; k < t.length; k++) if (m >= t[k]) i = k;
+        if (i < 0 || (today() + ":" + i).equals(prefs(c).getString("prayerAck", ""))) return null;
+        return Prayer.NAMES[i];
+    }
+
+    /** "I understand": no more reminders until the next adhan. */
+    static void ackPrayer(Context c) {
+        int[] t = prayers(c);
+        long m = msOfDay(System.currentTimeMillis()) / 60000;
+        int i = -1;
+        for (int k = 0; k < t.length; k++) if (m >= t[k]) i = k;
+        prefs(c).edit().putString("prayerAck", today() + ":" + i).apply();
+    }
+
+    /** Milliseconds until the next adhan, or Long.MAX_VALUE when prayer reminders are off. */
+    static long nextPrayer(Context c, long now) {
+        if (get(c).optJSONObject("prayer") == null) return Long.MAX_VALUE;
+        int[] t = prayers(c);
+        long ms = msOfDay(now), soonest = t[0] * 60000L + DAY - ms; // tomorrow's Fajr, about
+        for (int m : t) if (m * 60000L > ms) soonest = Math.min(soonest, m * 60000L - ms);
+        return soonest;
+    }
+
+    /** The app is closed by the clock now (outside its hours, or bedtime), or null. */
     static Shut shut(Context c, String pkg, long now) {
         if (now < prefs(c).getLong("free:" + pkg, 0)) return null; // an emergency unlock is running
         JSONObject r = get(c);
@@ -290,15 +321,6 @@ final class Rules {
             long from = b.optInt("from") * 60000L, to = b.optInt("to") * 60000L;
             if (inside(t, from, to)) return new Shut(BlockActivity.BEDTIME, now + ahead(t, to), "");
         }
-        JSONObject p = r.optJSONObject("prayer");
-        if (p != null) {
-            int[] times = prayers(p);
-            long after = p.optInt("after", 20) * 60000L;
-            for (int i = 0; i < times.length; i++) {
-                long s = times[i] * 60000L;
-                if (t >= s && t < s + after) return new Shut(BlockActivity.PRAYER, now + (s + after - t), Prayer.NAMES[i]);
-            }
-        }
         return null;
     }
 
@@ -320,13 +342,6 @@ final class Rules {
         if (!watched(r, pkg)) return next;
         JSONObject b = r.optJSONObject("bedtime");
         if (b != null) next = Math.min(next, ahead(t, b.optInt("from") * 60000L));
-        JSONObject p = r.optJSONObject("prayer");
-        if (p != null) {
-            int[] times = prayers(p);
-            long soonest = times[0] * 60000L + DAY - t; // tomorrow's Fajr, about
-            for (int m : times) if (m * 60000L > t) soonest = Math.min(soonest, m * 60000L - t);
-            next = Math.min(next, soonest);
-        }
         return next;
     }
 

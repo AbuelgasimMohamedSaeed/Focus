@@ -118,6 +118,35 @@ public class MainActivity extends Activity {
         keepScreenOn(Sit.load(this) != null);
     }
 
+    private static final int ASK_LOCATION = 7;
+
+    /** Prayer times for where you are: ask for rough location, or open Focus's settings if it was refused for good. */
+    void askLocation() {
+        if (Place.allowed(this)) {
+            Place.refresh(this, true, this::placeChanged);
+        } else if (getSharedPreferences("focus", MODE_PRIVATE).getBoolean("askedLocation", false)
+                && !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
+        } else {
+            getSharedPreferences("focus", MODE_PRIVATE).edit().putBoolean("askedLocation", true).apply();
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, ASK_LOCATION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code == ASK_LOCATION) {
+            if (Place.allowed(this)) Place.refresh(this, true, this::placeChanged);
+            else placeChanged();
+        }
+    }
+
+    private void placeChanged() {
+        if (web != null) web.evaluateJavascript("window.focusPlaceChanged && focusPlaceChanged()", null);
+        FocusAccessibility.rulesChanged();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -131,6 +160,7 @@ public class MainActivity extends Activity {
         nm.cancel(Engine.ID_ALERT);
         Sit sit = Sit.load(this);
         Engine.refresh(this, sit); // Focus is on screen: no notification and no top line
+        Place.refresh(this, false, this::placeChanged); // prayer times follow you, checked at most every 6 hours
         keepScreenOn(sit != null);
         long now = System.currentTimeMillis();
         if (sit == null && now - loadedAt > 6 * 3600_000L) { // been open a long time: pick up any new version of the app

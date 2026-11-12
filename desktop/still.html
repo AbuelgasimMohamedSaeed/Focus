@@ -605,19 +605,18 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <div class="rule"><span>Delay before loosening<small>Turning limits down or off only takes effect after this</small></span>
           <div class="seg small" data-rule="delay"><button data-v="0">Off</button><button data-v="10">10m</button><button data-v="30">30m</button><button data-v="60">1h</button></div></div>
         <div class="label">Quiet times</div>
-        <p class="note" style="text-align:left;margin:-4px 0 4px">These close every app you watch.</p>
+        <p class="note" style="text-align:left;margin:-4px 0 4px">Closes every app you watch.</p>
         <div class="set-row"><span>Bedtime<small>Watched apps stay closed overnight</small></span>
           <button class="switch" id="bedSw" role="switch" aria-checked="false" aria-label="Bedtime"></button></div>
         <div class="win-row" id="bedTimes"><input type="time" id="bedFrom" aria-label="Bedtime starts"><span>to</span><input type="time" id="bedTo" aria-label="Bedtime ends"></div>
-        <div class="set-row"><span>Prayer times<small>Watched apps close at each adhan</small></span>
-          <button class="switch" id="prSw" role="switch" aria-checked="false" aria-label="Prayer times"></button></div>
-        <div id="prBox">
-          <div class="rule"><span>Where<small>Times are worked out on the phone, no internet needed</small></span>
-            <div class="seg small" id="prCity"><button data-v="kl">Kuala Lumpur</button><button data-v="khartoum">Khartoum</button><button data-v="makkah">Makkah</button><button data-v="cairo">Cairo</button></div></div>
-          <div class="rule"><span>Close for<small>From the adhan</small></span>
-            <div class="seg small" id="prAfter"><button data-v="10">10m</button><button data-v="15">15m</button><button data-v="20">20m</button><button data-v="30">30m</button></div></div>
-          <p class="note pr-times" id="prTimes"></p>
-        </div>
+      </div>
+      <div class="label">Prayer</div>
+      <div class="set-row"><span>Prayer reminder<small>At each adhan, the app you're in stops until you tap “I understand”</small></span>
+        <button class="switch" id="prSw" role="switch" aria-checked="false" aria-label="Prayer reminder"></button></div>
+      <div id="prBox">
+        <p class="note pr-times" id="prWhere"></p>
+        <p class="note pr-times" id="prTimes"></p>
+        <button class="mini" id="prLoc" style="margin-top:10px">Use my location</button>
       </div>
     </div>
   </section>
@@ -1983,16 +1982,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   AT.limits = AT.limits || {};
   AT.windows = AT.windows || {};
   AT.bedtime = AT.bedtime || { on: false, from: 23 * 60, to: 6 * 60 };
-  AT.prayer = AT.prayer || { on: false, city: 'kl', after: 20 };
-  // places for prayer times, with the method each country uses (Fajr and Isha sun angles, or Isha a set time after Maghrib)
-  const PR_CITIES = {
-    kl: { lat: 3.139, lng: 101.687, fajr: 20, isha: 18, ishaMin: 0 },        // JAKIM
-    khartoum: { lat: 15.5007, lng: 32.5599, fajr: 19.5, isha: 17.5, ishaMin: 0 }, // Egyptian authority
-    makkah: { lat: 21.4225, lng: 39.8262, fajr: 18.5, isha: 0, ishaMin: 90 },  // Umm al-Qura
-    cairo: { lat: 30.0444, lng: 31.2357, fajr: 19.5, isha: 17.5, ishaMin: 0 }
-  };
-  const prPlace = () => { const c = PR_CITIES[AT.prayer.city] || PR_CITIES.kl;
-    return { lat: c.lat, lng: c.lng, fajr: c.fajr, isha: c.isha, ishaMin: c.ishaMin, after: AT.prayer.after || 20 }; };
+  AT.prayer = { on: !!(AT.prayer && AT.prayer.on) }; // where and which method: Android works that out from your location
   const cleanWins = () => { const o = {};
     Object.keys(AT.windows).forEach(k => { const w = (AT.windows[k] || []).filter(x => x.from !== x.to); if (w.length && AT.watched.includes(k)) o[k] = w; });
     return o; };
@@ -2002,7 +1992,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       if (AT_OK && FocusAndroid.setAppRules) FocusAndroid.setAppRules(JSON.stringify({ track: !!AT.trackOnly, limits: AT.limits,
         friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0,
         watched: AT.watched, windows: cleanWins(), bedtime: AT.bedtime.on ? { from: AT.bedtime.from, to: AT.bedtime.to } : null,
-        prayer: AT.prayer.on ? prPlace() : null }));
+        prayer: AT.prayer.on ? {} : null }));
     } catch (e) {}
   }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
@@ -2059,7 +2049,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       : '<li class="empty">No apps watched yet. Tap <b>Watch</b> next to an app below, or add one.</li>';
     $('atOthers').innerHTML = others.length ? others.map(a => atRow(a, max, 'watch')).join('') : '<li class="empty">Nothing else used today.</li>';
     atFillIcons($('atBody'));
-    const anyLimit = !AT.trackOnly && (AT.watched.some(p => AT.limits[p] || (AT.windows[p] || []).length) || AT.bedtime.on || AT.prayer.on);
+    const anyLimit = (!AT.trackOnly && (AT.watched.some(p => AT.limits[p] || (AT.windows[p] || []).length) || AT.bedtime.on)) || AT.prayer.on;
     let acc = true;
     try { acc = !FocusAndroid.lineReady || FocusAndroid.lineReady(); } catch (e) {}
     $('atNeedAcc').hidden = !anyLimit || acc;
@@ -2081,15 +2071,19 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('atStatus').hidden = !lines.length; $('atStatus').textContent = lines.join(' ');
     $('bedSw').setAttribute('aria-checked', String(!!AT.bedtime.on)); $('bedTimes').hidden = !AT.bedtime.on;
     $('bedFrom').value = toHM(AT.bedtime.from); $('bedTo').value = toHM(AT.bedtime.to);
-    $('prSw').setAttribute('aria-checked', String(!!AT.prayer.on)); $('prBox').hidden = !AT.prayer.on;
-    $('prCity').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === AT.prayer.city));
-    $('prAfter').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === (AT.prayer.after || 20)));
-    if (AT.prayer.on) {
-      let t = [];
-      try { const c = prPlace(); t = JSON.parse(FocusAndroid.prayerTimes(c.lat, c.lng, c.fajr, c.isha, c.ishaMin)); } catch (e) {}
-      $('prTimes').textContent = t.length === 5 ? 'Today: ' + ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((n, i) => n + ' ' + clock12(t[i])).join(' · ') : '';
-    }
+    paintPrayer();
   }
+  function paintPrayer() {
+    $('prSw').setAttribute('aria-checked', String(!!AT.prayer.on)); $('prBox').hidden = !AT.prayer.on;
+    if (!AT.prayer.on) return;
+    let p = {};
+    try { p = JSON.parse(FocusAndroid.prayerInfo()); } catch (e) {}
+    const t = p.times || [];
+    $('prWhere').textContent = p.name ? (p.gps ? p.name : p.name + ' (from your time zone; allow location for exact times)') : '';
+    $('prTimes').textContent = t.length === 5 ? 'Today: ' + ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((n, i) => n + ' ' + clock12(t[i])).join(' · ') : '';
+    $('prLoc').textContent = p.gps ? 'Update my location' : 'Use my location';
+  }
+  window.focusPlaceChanged = () => paintPrayer();
   // minutes after midnight <-> "HH:MM" for time inputs, and "6:00 PM" for reading
   const toHM = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   const fromHM = v => { const [h, m] = String(v || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
@@ -2186,8 +2180,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     ['bedFrom', 'bedTo'].forEach(id => $(id).addEventListener('change', () => {
       AT.bedtime[id === 'bedFrom' ? 'from' : 'to'] = fromHM($(id).value); save(); pushRules();
     }));
-    $('prCity').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; AT.prayer.city = b.dataset.v; save(); pushRules(); paintRules(); });
-    $('prAfter').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; AT.prayer.after = +b.dataset.v; save(); pushRules(); paintRules(); });
+    $('prLoc').addEventListener('click', () => { try { FocusAndroid.askLocation(); } catch (e) {} });
     $('atLimitDone').addEventListener('click', () => { $('atLimitSheet').hidden = true; paintAppTime(); });
     $('atTrack').addEventListener('click', () => { AT.trackOnly = !AT.trackOnly; save(); pushRules(); paintAppTime(); });
     $('atAccBtn').addEventListener('click', () => { try { FocusAndroid.setupLine(); } catch (e) {} });
