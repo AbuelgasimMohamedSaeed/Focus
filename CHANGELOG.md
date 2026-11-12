@@ -6,7 +6,7 @@
 - Dhikr vibration goes through Android itself: a strong tap on each of the last 10, a double buzz at the goal.
 - New Tick sound: a soft tick-tock every second while the sit runs (with the Ring bell at the start and end).
 - Dhikr history moved behind a History button, so the Dhikr screen is only the counter.
-- The Urge tab is gone.
+- The Urge screen is removed completely, along with its "urges beaten" count on Progress.
 
 ## Android app 1.2 (2026-11-13): App Time, stage 1
 - New App Time page (Android): minutes and number of opens per app today, read from Android's own usage records.

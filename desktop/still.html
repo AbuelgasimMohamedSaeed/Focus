@@ -474,35 +474,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <button class="mini dz-histbtn" id="dzHistBtn">History</button>
   </section>
 
-  <section class="screen" id="urge" hidden>
-    <header class="cap">
-      <div class="cap-day">Want to scroll?</div>
-      <div class="cap-total">Breathe for one minute first. Then decide.</div>
-    </header>
-    <div class="breath">
-      <div class="orb" id="orb"></div>
-      <div class="breath-word" id="breathWord">Ready when you are</div>
-      <div class="breath-left" id="breathLeft">1:00</div>
-    </div>
-    <button class="pill" id="breathBtn">Breathe · 1 min</button>
-    <p class="hint" id="urgeCount">0 urges beaten today</p>
-    <details class="block">
-      <summary>Block the apps for real</summary>
-      <h4>iPhone</h4>
-      <ol>
-        <li>Settings → Screen Time → App Limits → Add Limit.</li>
-        <li>Tick <b>Social</b>, set 1 minute a day, turn on Block at End of Limit.</li>
-        <li>Let a friend set your Screen Time passcode so you can't skip it.</li>
-      </ol>
-      <h4>Android</h4>
-      <ol>
-        <li>Settings → Digital Wellbeing &amp; parental controls → Dashboard.</li>
-        <li>Tap each social app → App timer → 1 minute.</li>
-        <li>Or turn on Focus mode and add the social apps to it.</li>
-      </ol>
-      <p>The strongest option is deleting the apps from your phone and only checking them on your laptop.</p>
-    </details>
-  </section>
 
   <section class="screen" id="progress" hidden>
     <header class="hero">
@@ -514,7 +485,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       <div><dt>Current streak</dt><dd id="sStreak">0 days</dd></div>
       <div><dt>Best streak</dt><dd id="sBest">0 days</dd></div>
       <div><dt>Daily average</dt><dd id="sAvg">0m</dd><small>last 14 days</small></div>
-      <div><dt>Urges beaten</dt><dd id="sUrges">0</dd><small>all time</small></div>
     </dl>
     <article class="card">
       <div class="card-h"><h3>Daily minutes</h3><span class="card-sub">Last 14 days</span></div>
@@ -726,11 +696,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('sStreak').textContent = days(c.streak);
     $('sBest').textContent = days(c.best);
     $('sAvg').textContent = fmtShort(c.avg14);
-    $('sUrges').textContent = c.urges;
     $('goalLbl').textContent = fmtShort(S.goal);
     drawCharts(c);
-    const u = S.urges[c.today] || 0;
-    $('urgeCount').textContent = u === 1 ? '1 urge beaten today' : u + ' urges beaten today';
     document.querySelectorAll('#goalSeg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.goal));
     const recent = S.sessions.slice(-30).reverse();
     $('log').innerHTML = recent.length ? recent.map(s => {
@@ -1497,45 +1464,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   hold.addEventListener('keyup', holdEnd);
   hold.addEventListener('contextmenu', e => e.preventDefault());
 
-  // ---- urge breathing
-  const orb = $('orb');
-  let br = null;
-  function phase(inhale) {
-    if (!br) return;
-    orb.style.transitionDuration = (inhale ? 4 : 6) + 's';
-    orb.classList.toggle('big', inhale);
-    $('breathWord').textContent = inhale ? 'Breathe in' : 'Breathe out';
-    br.t = setTimeout(() => phase(!inhale), inhale ? 4000 : 6000);
-  }
-  function startBreath() {
-    ensureAudio();
-    br = { end: Date.now() + 60000 };
-    $('breathBtn').textContent = 'Stop';
-    phase(true);
-    br.iv = setInterval(() => {
-      const left = Math.max(0, Math.ceil((br.end - Date.now()) / 1000));
-      $('breathLeft').textContent = left >= 60 ? '1:00' : '0:' + pad(left);
-      if (left <= 0) stopBreath(true);
-    }, 200);
-  }
-  function stopBreath(done) {
-    if (!br) return;
-    clearTimeout(br.t); clearInterval(br.iv); br = null;
-    orb.style.transitionDuration = '1.2s';
-    orb.classList.remove('big');
-    $('breathLeft').textContent = '1:00';
-    if (done) {
-      const k = dkey(Date.now());
-      S.urges[k] = (S.urges[k] || 0) + 1;
-      save(); render();
-      $('breathWord').textContent = 'It passed. Put the phone down.';
-      $('breathBtn').textContent = 'Breathe again';
-    } else {
-      $('breathWord').textContent = 'Ready when you are';
-      $('breathBtn').textContent = 'Breathe · 1 min';
-    }
-  }
-  $('breathBtn').addEventListener('click', () => { br ? stopBreath(false) : startBreath(); });
 
   // ---- delete a sit from History (two taps, like Dhikr)
   let sitArm = null, sitT;
@@ -1572,11 +1500,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     ind.style.transform = 'translate(' + a.offsetLeft + 'px,' + a.offsetTop + 'px)';
   }
   function showTab(t) {
-    ['sit', 'dhikr', 'urge', 'progress', 'apptime'].forEach(id => { $(id).hidden = id !== t; });
+    ['sit', 'dhikr', 'progress', 'apptime'].forEach(id => { $(id).hidden = id !== t; });
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
     replay($(t), 'enter'); moveInd();
     if (t === 'progress') countUp($('pTotalBig'), stats().total, fmtTotal, 1100);
-    if (br && t !== 'urge') stopBreath(false);
     if (t === 'sit') requestAnimationFrame(sizeRuler);
     if (t === 'progress') requestAnimationFrame(() => drawCharts());
     if (t === 'dhikr' && !S.dhikr.cur) requestAnimationFrame(() => $('dzGoalIn').focus());
