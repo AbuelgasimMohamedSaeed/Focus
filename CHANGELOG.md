@@ -1,5 +1,10 @@
 # Changelog
 
+## Android app 1.5 (2026-11-13)
+- Silence button during a sit (top left, and in the mini window): mutes the bells and the ticking; vibration stays.
+- The top line now disappears whenever Focus is open.
+- The mini window lays itself out again after you resize it.
+
 ## Android app 1.4 (2026-11-13)
 - Mini window looks like Xiaomi's floating windows: one surface in the page's color (white at a Dhikr goal), three dots on top to move it, a curved corner to resize it.
 - A line at the bottom of the mini window: tap it or swipe it up to open the full app.

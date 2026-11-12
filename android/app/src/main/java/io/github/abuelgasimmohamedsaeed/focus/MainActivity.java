@@ -122,9 +122,9 @@ public class MainActivity extends Activity {
         web.resumeTimers();
         stopService(new Intent(this, BellService.class)); // opening Focus quiets a ringing bell
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.cancel(Engine.ID_LIVE);
         nm.cancel(Engine.ID_ALERT);
         Sit sit = Sit.load(this);
+        Engine.refresh(this, sit); // Focus is on screen: no notification and no top line
         keepScreenOn(sit != null);
         long now = System.currentTimeMillis();
         if (sit == null && now - loadedAt > 6 * 3600_000L) { // been open a long time: pick up any new version of the app
@@ -331,6 +331,10 @@ public class MainActivity extends Activity {
                     return true;
                 case MotionEvent.ACTION_UP:
                     prefs().edit().putInt("miniW", lp.width).putInt("miniH", lp.height).apply();
+                    web.postDelayed(() -> { // make sure the page lays itself out for the new size
+                        web.requestLayout();
+                        web.evaluateJavascript("window.dispatchEvent(new Event('resize'))", null);
+                    }, 120);
                     return true;
                 default:
                     return false;
