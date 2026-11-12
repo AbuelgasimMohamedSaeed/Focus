@@ -1,5 +1,8 @@
 # Changelog
 
+## Android app (2026-11-13): your own prayer times
+- The five prayer times are a list. Change any time to match your mosque; Focus keeps that difference (say +3 min) every day. The ↺ button goes back to the calculated time.
+
 ## Android app (2026-11-13): prayer reminder
 - Prayer time is now a reminder, not a block: at each adhan, whatever app you're in stops with "Time for Asr" until you tap "I understand", then it carries on. One tap per prayer.
 - It works with Track only too, and covers every app, not only watched ones.

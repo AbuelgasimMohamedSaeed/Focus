@@ -256,6 +256,13 @@ body.theme-light .win-row input{color-scheme:light}
 .win-row .del{flex:0 0 auto}
 #atLimitSheet{overflow-y:auto;padding-bottom:24px}
 .pr-times{text-align:left;margin:4px 0 0;color:var(--fg)}
+.pr-list{list-style:none;margin:8px 0 0;padding:0}
+.pr-list li{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.pr-list .pr-name{flex:1;min-width:0;font-size:15px}
+.pr-list .pr-name small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.pr-list input{width:150px;height:40px;border-radius:12px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 15px var(--mono);padding:0 10px;color-scheme:dark}
+body.theme-light .pr-list input{color-scheme:light}
+.pr-list .del{flex:0 0 auto}
 .at-pick{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding:18px max(16px,env(safe-area-inset-left,0px)) 0}
 .at-pick header{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .at-pick h2{margin:0;font-size:22px;letter-spacing:-.02em}
@@ -693,7 +700,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
         <button class="switch" id="prSw" role="switch" aria-checked="false" aria-label="Prayer reminder"></button></div>
       <div id="prBox">
         <p class="note pr-times" id="prWhere"></p>
-        <p class="note pr-times" id="prTimes"></p>
+        <ul class="pr-list" id="prList"></ul>
+        <p class="note" style="text-align:left;margin:8px 0 0">Not matching your mosque? Change a time and Focus keeps that difference every day.</p>
         <button class="mini" id="prLoc" style="margin-top:10px">Use my location</button>
       </div>
     </div>
@@ -2060,7 +2068,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   AT.limits = AT.limits || {};
   AT.windows = AT.windows || {};
   AT.bedtime = AT.bedtime || { on: false, from: 23 * 60, to: 6 * 60 };
-  AT.prayer = { on: !!(AT.prayer && AT.prayer.on) }; // where and which method: Android works that out from your location
+  // where and which method: Android works that out from your location; adjust = your minutes +/- for each prayer
+  AT.prayer = { on: !!(AT.prayer && AT.prayer.on), adjust: (AT.prayer && Array.isArray(AT.prayer.adjust) ? AT.prayer.adjust : [0, 0, 0, 0, 0]) };
   const cleanWins = () => { const o = {};
     Object.keys(AT.windows).forEach(k => { const w = (AT.windows[k] || []).filter(x => x.from !== x.to); if (w.length && AT.watched.includes(k)) o[k] = w; });
     return o; };
@@ -2070,7 +2079,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       if (AT_OK && FocusAndroid.setAppRules) FocusAndroid.setAppRules(JSON.stringify({ track: !!AT.trackOnly, limits: AT.limits,
         friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0,
         watched: AT.watched, windows: cleanWins(), bedtime: AT.bedtime.on ? { from: AT.bedtime.from, to: AT.bedtime.to } : null,
-        prayer: AT.prayer.on ? {} : null }));
+        prayer: AT.prayer.on ? { adjust: AT.prayer.adjust } : null }));
     } catch (e) {}
   }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
@@ -2158,9 +2167,16 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     try { p = JSON.parse(FocusAndroid.prayerInfo()); } catch (e) {}
     const t = p.times || [];
     $('prWhere').textContent = p.name ? (p.gps ? p.name : p.name + ' (from your time zone; allow location for exact times)') : '';
-    $('prTimes').textContent = t.length === 5 ? 'Today: ' + ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((n, i) => n + ' ' + clock12(t[i])).join(' · ') : '';
+    prToday = t;
+    const adj = AT.prayer.adjust, ar = ['\u0627\u0644\u0641\u062c\u0631', '\u0627\u0644\u0638\u0647\u0631', '\u0627\u0644\u0639\u0635\u0631', '\u0627\u0644\u0645\u063a\u0631\u0628', '\u0627\u0644\u0639\u0634\u0627\u0621'];
+    $('prList').innerHTML = t.length === 5 ? PR_NAMES.map((n, i) => '<li><span class="pr-name">' + n + ' \u00b7 ' + ar[i] +
+      '<small>' + (adj[i] ? 'Yours \u00b7 ' + (adj[i] > 0 ? '+' : '\u2212') + Math.abs(adj[i]) + ' min' : 'Calculated') + '</small></span>' +
+      '<input type="time" data-p="' + i + '" value="' + toHM(t[i]) + '" aria-label="' + n + ' time">' +
+      (adj[i] ? '<button class="del" data-preset="' + i + '" aria-label="Back to the calculated time">\u21ba</button>' : '') + '</li>').join('') : '';
     $('prLoc').textContent = p.gps ? 'Update my location' : 'Use my location';
   }
+  const PR_NAMES = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  let prToday = [];
   window.focusPlaceChanged = () => paintPrayer();
   // minutes after midnight <-> "HH:MM" for time inputs, and "6:00 PM" for reading
   const toHM = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
@@ -2259,6 +2275,21 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       AT.bedtime[id === 'bedFrom' ? 'from' : 'to'] = fromHM($(id).value); save(); pushRules();
     }));
     $('prLoc').addEventListener('click', () => { try { FocusAndroid.askLocation(); } catch (e) {} });
+    // your own time for a prayer: kept as minutes +/- from the calculation, so it stays right as the times move each day
+    $('prList').addEventListener('change', e => {
+      const inp = e.target.closest('input[data-p]');
+      if (!inp || !inp.value || prToday.length !== 5) return;
+      const i = +inp.dataset.p, calc = prToday[i] - AT.prayer.adjust[i];
+      let d = fromHM(inp.value) - calc;
+      if (d > 720) d -= 1440; if (d < -720) d += 1440;
+      if (Math.abs(d) > 120) { toast('That is over 2 hours from the calculated time'); paintPrayer(); return; }
+      AT.prayer.adjust[i] = d; save(); pushRules(); paintPrayer();
+    });
+    $('prList').addEventListener('click', e => {
+      const b = e.target.closest('button[data-preset]');
+      if (!b) return;
+      AT.prayer.adjust[+b.dataset.preset] = 0; save(); pushRules(); paintPrayer();
+    });
     $('atLimitDone').addEventListener('click', () => { $('atLimitSheet').hidden = true; paintAppTime(); });
     $('atTrack').addEventListener('click', () => { AT.trackOnly = !AT.trackOnly; save(); pushRules(); paintAppTime(); });
     $('atAccBtn').addEventListener('click', () => { try { FocusAndroid.setupLine(); } catch (e) {} });

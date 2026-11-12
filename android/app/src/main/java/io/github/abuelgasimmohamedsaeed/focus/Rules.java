@@ -23,7 +23,7 @@ import java.util.Locale;
  *   watched    the apps on the watch list: bedtime and prayer times close these
  *   windows    {package: [{from, to}]} minutes after midnight: the app opens only in these hours
  *   bedtime    {from, to} or null: watched apps closed in these hours
- *   prayer     {} or null: at each adhan, whatever app is open shows a reminder until you tap "I understand"
+ *   prayer     {adjust: [5 minute corrections]} or null: at each adhan, whatever app is open shows a reminder until you tap "I understand"
  *              (where: see Place; it works with Track only too, since it blocks nothing)
  * Tightening applies at once; loosening waits for the delay, so turning limits off in a weak moment doesn't work instantly.
  */
@@ -95,7 +95,7 @@ final class Rules {
                 || b.optInt("cooldown", 0) < a.optInt("cooldown", 0)
                 || b.optInt("delay", 0) < a.optInt("delay", 0)
                 || changed(a.optJSONObject("bedtime"), b.optJSONObject("bedtime"))
-                || changed(a.optJSONObject("prayer"), b.optJSONObject("prayer"))
+                || (a.optJSONObject("prayer") != null && b.optJSONObject("prayer") == null) // reminder turned off
                 || windowsLooser(a, b) || unwatched(a, b);
     }
 
@@ -255,13 +255,19 @@ final class Rules {
     private static String prayerKey;
     private static int[] prayerTimes;
 
-    /** Today's adhan times in minutes after midnight for where the phone is, worked out once a day per place. */
+    /**
+     * Today's adhan times in minutes after midnight for where the phone is, plus your own corrections
+     * (the minutes you moved each one on the page), worked out once a day per place.
+     */
     static synchronized int[] prayers(Context c) {
-        JSONObject p = Place.get(c);
-        String key = today() + p.toString();
+        JSONObject p = Place.get(c), rule = get(c).optJSONObject("prayer");
+        JSONArray adjust = rule == null ? null : rule.optJSONArray("adjust");
+        String key = today() + p + adjust;
         if (!key.equals(prayerKey)) {
-            prayerTimes = Prayer.today(p.optDouble("lat", 3.139), p.optDouble("lng", 101.687),
+            int[] t = Prayer.today(p.optDouble("lat", 3.139), p.optDouble("lng", 101.687),
                     p.optDouble("fajr", 20), p.optDouble("isha", 18), p.optInt("ishaMin", 0));
+            for (int i = 0; i < t.length && adjust != null; i++) t[i] = Math.max(0, Math.min(1439, t[i] + Math.max(-120, Math.min(120, adjust.optInt(i)))));
+            prayerTimes = t;
             prayerKey = key;
         }
         return prayerTimes;
