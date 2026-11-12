@@ -1,5 +1,11 @@
 # Changelog
 
+## Android app 1.0 (2026-11-12)
+- Focus as a real Android app: live countdown in the notifications and on the lock screen (status-bar chip on Android 16).
+- Start, interval and end bells ring in your chosen sound even when Focus is closed or the screen is off.
+- Screen stays on during a sit; automatic backups to Download › Focus backups.
+- Updates itself: new app versions are offered inside the app.
+
 ## 1.1.0 (2026-11-12)
 - Installable web app (PWA) with offline support and automatic updates.
 - Desktop "island" pill: close button and line-only mode.

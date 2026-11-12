@@ -6,3 +6,9 @@ out/
 Thumbs.db
 focus-backup-*.json
 still-backup-*.json
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+android/*.keystore

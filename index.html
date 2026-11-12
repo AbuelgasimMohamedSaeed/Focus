@@ -587,6 +587,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 
 <script>
 (() => {
+  // In the Android app, the native side (live line, bells while Focus is closed, backups) is reached through FocusAndroid
+  if (!window.stillNative && window.FocusAndroid) window.stillNative = {
+    android: true,
+    sitState: s => FocusAndroid.sitState(s ? JSON.stringify(s) : 'null'),
+    saveBackup: json => FocusAndroid.saveBackup(json),
+    findBackup: async () => { const j = FocusAndroid.findBackup(); return j ? { json: j } : null; }
+  };
+  const ANDROID = !!(window.stillNative && window.stillNative.android);
   const KEY = 'still.v1', STEP = 16, MIN = 5, MAX = 180;
   const $ = id => document.getElementById(id);
   const blank = { pick: 120, goal: 120, start: null, sessions: [], urges: {}, running: null };
@@ -620,7 +628,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const r = S.running;
     let color = '';
     try { color = r && r.label ? labelColor(r.label, false) : ''; } catch (e) {}
-    const st = r ? JSON.stringify({ endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over, color }) : 'null';
+    let sound = 'ring';
+    try { sound = soundName(); } catch (e) {}
+    const st = r ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over,
+      color, up: !!r.up, sound, interval: S.interval || 0 }) : 'null';
     if (st === lastSit) return;
     lastSit = st;
     try { window.stillNative.sitState(JSON.parse(st)); } catch (e) {}
@@ -961,6 +972,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   // ---- keep screen awake
   let lock = null;
   async function keepAwake() {
+    if (ANDROID) { $('runWarn').hidden = true; return; } // the Android app keeps the screen on itself
     try {
       if ('wakeLock' in navigator) { lock = await navigator.wakeLock.request('screen'); $('runWarn').hidden = true; return; }
     } catch (e) {}
@@ -1000,34 +1012,38 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('run').hidden = false;
     keepAwake(); tick(); wake();
   }
-  function timesUp() {
+  function timesUp(loud) {
     overUI(true); wake(); replay($('clock'), 'pop');
+    if (!loud) return; // Focus was in the background and Android already rang the bell
     const s = soundName(), rep = BELLS[s] ? BELLS[s].repeat : [0, 4500];
     rep.forEach((ms, i) => setTimeout(() => bell(i ? .7 : 1), ms));
     try { if (navigator.vibrate) navigator.vibrate([400, 200, 400]); } catch (e) {}
   }
+  let lastTick = 0;
   function tick() {
     const r = S.running;
     if (!r) return;
     const now = Date.now();
+    const late = ANDROID && now - lastTick > 1500; // back from the background, where Android rang the bells itself
+    lastTick = now;
     if (now < r.startAt) { // 10-second settle
       const sv = fmtClock(Math.ceil((r.startAt - now) / 1000));
       if ($('clock').textContent !== sv) { $('clock').textContent = sv; replay($('clock'), 'pop'); }
       $('runSub').textContent = 'Get settled · the bell starts your sit';
       return;
     }
-    if (!r.begun) { r.begun = true; save(); overUI(!!r.over); bell(.45); }
+    if (!r.begun) { r.begun = true; save(); overUI(!!r.over); if (!late) bell(.45); }
     const left = r.endAt - now;
     if (left > 0) {
       const iv = (S.interval || 0) * 60000;
       if (iv) {
         const k = Math.floor((now - r.startAt) / iv);
-        if (k > (r.iv || 0)) { r.iv = k; save(); if (left > 20000) bell(.4); }
+        if (k > (r.iv || 0)) { r.iv = k; save(); if (left > 20000 && !late) bell(.4); }
       }
       $('clock').textContent = r.up ? fmtClock(Math.floor((now - r.startAt) / 1000)) : fmtClock(Math.ceil(left / 1000));
       return;
     }
-    if (!r.over) { r.over = true; save(); timesUp(); paintAdj(); }
+    if (!r.over) { r.over = true; save(); timesUp(!late); paintAdj(); }
     $('clock').textContent = r.up ? fmtClock(Math.floor((now - r.startAt) / 1000)) : '+' + fmtClock(Math.floor((now - r.endAt) / 1000));
     $('runSub').textContent = overSub(r);
   }
@@ -1342,6 +1358,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('bkMsg').textContent = 'Your progress lives on this device only.';
   }
   $('bkSave').addEventListener('click', () => {
+    if (ANDROID) { // a download link does nothing inside the app, so the app saves the file itself
+      window.stillNative.saveBackup(JSON.stringify({ app: 'Focus', version: 1, savedAt: new Date().toISOString(), data: S }));
+      $('bkMsg').textContent = 'Backup saved to Download \u203a Focus backups.';
+      return;
+    }
     const json = JSON.stringify({ app: 'Focus', version: 1, savedAt: new Date().toISOString(), data: S }, null, 2);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -1676,7 +1697,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
     }
   }
-  if (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches) $('miniBtn').hidden = true;
+  if (ANDROID || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
   $('miniBtn').addEventListener('click', () => {
     if (window.stillNative) nativeMini(true);
     else if ('documentPictureInPicture' in window) openMini(true);
@@ -1697,7 +1718,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   syncSit();
   (async () => {
     if (!window.stillNative) return;
-    $('bkMsg').textContent = 'Backed up automatically to Documents \u203a Focus backups (last 30 days kept).';
+    $('bkMsg').textContent = 'Backed up automatically to ' + (ANDROID ? 'Download' : 'Documents') + ' \u203a Focus backups (last 30 days kept).';
     const empty = S.sessions.length === 0 && !((S.dhikr && S.dhikr.log) || []).length;
     let found = null;
     if (empty) { try { found = await window.stillNative.findBackup(); } catch (e) {} }

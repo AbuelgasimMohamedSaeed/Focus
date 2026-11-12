@@ -49,11 +49,20 @@
 ## Install
 
 ### Android tablet / phone
-1. Open **https://abuelgasimmohamedsaeed.github.io/Focus/** in Chrome or Samsung Internet.
-2. Menu → **Add to Home screen** / **Install app**.
-3. Focus opens full-screen like a normal app and works offline.
+**[Download Focus for Android](https://github.com/AbuelgasimMohamedSaeed/Focus/releases/latest/download/Focus.apk)** (Android 11 or newer)
 
-> A native Android build with a live status-bar timer is planned (see [Roadmap](#roadmap)).
+1. Open the link above on the tablet and download `Focus.apk`.
+2. Open the file. If Android asks, allow your browser to install apps, then tap **Install**.
+3. Open Focus and allow notifications.
+
+The app adds what a website can't do:
+- **Live line:** while a sit runs and Focus is closed, the time left counts down in the notification shade and on the lock screen. On Android 16 it can also show as a chip in the status bar.
+- **Bells with Focus closed:** the start, interval and end bells ring in the sound you chose, even with the screen off.
+- **Screen stays on** while you sit with Focus open.
+- **Automatic backups** to `Download › Focus backups`.
+- **Updates itself:** changes to the app's screens and features arrive the next time you open it online. When a new app version is released, Focus offers to install it.
+
+Prefer no install? Open **https://abuelgasimmohamedsaeed.github.io/Focus/** in Chrome and choose **Add to Home screen**. It works offline, but without the live line or bells while closed.
 
 ### Windows desktop
 The `desktop/` folder holds an Electron shell that adds:
@@ -71,7 +80,8 @@ npx electron .
 ## How updates work
 
 The app is a single page hosted on GitHub Pages.
-- **Web / installed PWA:** each launch checks for a newer `index.html` first (network-first) and falls back to the cached copy when offline. Pushing to `main` updates every device; no reinstall is needed.
+- **The app's screens and features** live on GitHub Pages. Every launch checks for a newer version first and falls back to the saved copy when offline, so pushing to `main` updates every device with no reinstall.
+- **The Android app around it:** a change under `android/` makes GitHub Actions build a signed APK and publish it as a release (`app-vN`). The installed app checks the latest release and offers the update.
 - **Desktop:** the Electron shell bundles its own copy today; loading the hosted version is planned.
 
 ## Privacy
@@ -91,6 +101,14 @@ focus/
 ├── manifest.webmanifest    # PWA metadata
 ├── sw.js                   # service worker: offline + update strategy
 ├── icons/                  # app icons (PWA, maskable, Apple, Windows .ico)
+├── android/                # Android app: live line, bells while closed, backups, self-update
+│   └── app/src/main/java/…/focus/
+│       ├── MainActivity.java   # full-screen window around the online app
+│       ├── Engine.java         # alarms, live notification, time's-up alert
+│       ├── BellService.java    # plays a bell while Focus is closed
+│       ├── Backups.java        # Download › Focus backups
+│       └── Updater.java        # checks GitHub releases and installs updates
+├── .github/workflows/android.yml   # builds and releases the APK
 ├── desktop/                # Windows app (Electron)
 │   ├── main.js             # window, tray, notifications, island, backups
 │   ├── preload.js          # safe bridge between app and Electron
@@ -103,7 +121,6 @@ focus/
 ## Roadmap
 
 - [ ] Desktop app loads the hosted version, with an offline fallback.
-- [ ] Android app with a live notification / status-bar timer and a time's-up alert.
 - [ ] Optional export and import between devices.
 
 ## License
