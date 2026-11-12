@@ -340,6 +340,29 @@ public class MainActivity extends Activity {
         content.addView(web, new FrameLayout.LayoutParams(-1, -1));
         int gs = Math.round(32 * d);
         content.addView(resize, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
+        View home = new View(this) { // the line at the bottom: tap it or swipe it up to open the full app
+            private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override
+            protected void onDraw(Canvas c) {
+                p.setColor(Color.luminance(pageColor) > .5f ? 0xFF8A8A86 : 0xFF6A6A72);
+                float w = 44 * d, t = 4 * d, cx = getWidth() / 2f, cy = getHeight() - 9 * d;
+                c.drawRoundRect(new RectF(cx - w / 2, cy - t / 2, cx + w / 2, cy + t / 2), t / 2, t / 2, p);
+            }
+        };
+        home.setContentDescription("Open the full app");
+        home.setOnTouchListener((v, e) -> {
+            if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                dragY = e.getRawY();
+                return true;
+            }
+            if (e.getActionMasked() == MotionEvent.ACTION_UP) {
+                float moved = e.getRawY() - dragY;
+                if (moved < -16 * d || Math.abs(moved) < 10 * d) closeMini(true); // swiped up, or tapped
+                return true;
+            }
+            return e.getActionMasked() == MotionEvent.ACTION_MOVE;
+        });
+        content.addView(home, new FrameLayout.LayoutParams(Math.round(96 * d), Math.round(26 * d), Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM));
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
         try {
             wm.addView(box, lp);

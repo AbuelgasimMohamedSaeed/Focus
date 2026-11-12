@@ -2,6 +2,7 @@
 
 ## Android app 1.4 (2026-11-13)
 - Mini window looks like Xiaomi's floating windows: one surface in the page's color (white at a Dhikr goal), three dots on top to move it, a curved corner to resize it.
+- A line at the bottom of the mini window: tap it or swipe it up to open the full app.
 - Opening Focus in Xiaomi's own floating window (or split screen) switches it to the small timer / counter view by itself.
 
 ## Android app 1.3 (2026-11-13)
