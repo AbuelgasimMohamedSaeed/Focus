@@ -383,6 +383,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <button class="mini-back" id="cBack" title="Back to full view" aria-label="Back to full view"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg></button></div>
   <div class="mini-big" id="cBig"></div><div class="mini-sub" id="cSub"></div><div class="mini-row" id="cRow"></div>
 </div>
+<div class="at-pick" id="atPick" hidden>
+  <header><h2>Apps to watch</h2><button class="mini" id="atPickDone">Done</button></header>
+  <input class="at-search" id="atSearch" type="search" placeholder="Search apps" autocomplete="off" aria-label="Search apps">
+  <ul class="at-list" id="atAll"></ul>
+</div>
 <div class="app">
   <section class="screen" id="sit">
     <header class="cap">
@@ -529,6 +534,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     </div>
     <div class="label">History</div>
     <ol class="log" id="log"></ol>
+    <div id="setBox" hidden>
+      <div class="label">Settings</div>
+      <div class="set-row"><span>App Time page<small>See how long you spend in your apps</small></span>
+        <button class="switch" id="atSwitch" role="switch" aria-checked="true" aria-label="App Time page"></button></div>
+    </div>
     <div class="label">Backup</div>
     <div class="dz-row">
       <button class="mini" id="bkSave">Save backup file</button>
@@ -540,6 +550,30 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       <button class="mini" id="bkNo">Cancel</button>
     </div>
     <p class="note" id="bkMsg">Your progress lives on this laptop only. Save a backup file every week or so.</p>
+  </section>
+
+  <section class="screen" id="apptime" hidden>
+    <header class="cap">
+      <div class="cap-day" id="atHead">App Time</div>
+      <div class="cap-total" id="atSub">Today</div>
+    </header>
+    <div class="at-perm" id="atPerm" hidden>
+      <b>Let Focus see your app time</b>
+      <ol>
+        <li>Tap <b>Open settings</b>.</li>
+        <li>Find <b>Focus</b> in the list and tap it.</li>
+        <li>Turn on <b>Permit usage access</b>, then come back.</li>
+      </ol>
+      <button class="pill" id="atGrant">Open settings</button>
+      <p class="note" style="margin:0">Your app time stays on this device. Focus only reads which apps were open and for how long.</p>
+    </div>
+    <div id="atBody" hidden>
+      <div class="label">Watching</div>
+      <ul class="at-list" id="atWatched"></ul>
+      <button class="mini at-add" id="atAdd">Add an app to watch</button>
+      <div class="label">Everything else today</div>
+      <ul class="at-list" id="atOthers"></ul>
+    </div>
   </section>
 
   <nav class="tabs" role="tablist">
@@ -554,6 +588,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     </button>
     <button class="tab" role="tab" data-tab="progress" aria-selected="false">
       <svg viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg><span>Progress</span>
+    </button>
+    <button class="tab" role="tab" data-tab="apptime" aria-selected="false" id="atTab" hidden>
+      <svg viewBox="0 0 24 24"><rect x="6.5" y="3" width="11" height="18" rx="2.5"/><path d="M12 9v3.5l2 1.5"/></svg><span>App Time</span>
     </button>
   </nav>
 </div>
@@ -1505,7 +1542,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     ind.style.transform = 'translate(' + a.offsetLeft + 'px,' + a.offsetTop + 'px)';
   }
   function showTab(t) {
-    ['sit', 'dhikr', 'urge', 'progress'].forEach(id => { $(id).hidden = id !== t; });
+    ['sit', 'dhikr', 'urge', 'progress', 'apptime'].forEach(id => { $(id).hidden = id !== t; });
     document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
     replay($(t), 'enter'); moveInd();
     if (t === 'progress') countUp($('pTotalBig'), stats().total, fmtTotal, 1100);
@@ -1513,6 +1550,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (t === 'sit') requestAnimationFrame(sizeRuler);
     if (t === 'progress') requestAnimationFrame(() => drawCharts());
     if (t === 'dhikr' && !S.dhikr.cur) requestAnimationFrame(() => $('dzGoalIn').focus());
+    if (t === 'apptime') paintAppTime();
     paintHit();
   }
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -1726,6 +1764,105 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     else enterCompact();
   });
   setInterval(paintMini, 250);
+
+  // ---- App Time (Android): how long and how often each app was used today
+  const AT_OK = ANDROID && !!(window.FocusAndroid && FocusAndroid.appUsage);
+  if (!S.appTime) S.appTime = { on: true, watched: [] };
+  const AT = S.appTime;
+  const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+  const opensTxt = n => n + (n === 1 ? ' open' : ' opens');
+  let atNames = null; // package -> name, for watched apps that weren't used today
+  function atAllApps() {
+    if (!atNames) { atNames = {}; try { JSON.parse(FocusAndroid.installedApps()).forEach(a => { atNames[a.pkg] = a.name; }); } catch (e) {} }
+    return atNames;
+  }
+  const atIcons = {};
+  // icons come from Android a few at a time, so long lists open instantly
+  function atFillIcons(box) {
+    const imgs = [...box.querySelectorAll('img[data-ic]')];
+    const step = () => {
+      imgs.splice(0, 6).forEach(img => {
+        const p = img.dataset.ic;
+        if (!(p in atIcons)) { try { atIcons[p] = FocusAndroid.appIcon(p) || ''; } catch (e) { atIcons[p] = ''; } }
+        if (atIcons[p]) img.src = atIcons[p];
+        img.removeAttribute('data-ic');
+      });
+      if (imgs.length) setTimeout(step, 16);
+    };
+    step();
+  }
+  const atImg = pkg => '<img class="at-ic" alt="" ' + (atIcons[pkg] ? 'src="' + atIcons[pkg] + '"' : 'data-ic="' + esc(pkg) + '"') + '>';
+  function atRow(a, max, btn) {
+    return '<li>' + atImg(a.pkg) + '<span class="at-mid"><span class="at-name">' + esc(a.name) + '</span>' +
+      '<span class="at-meta">' + fmtUse(a.ms) + ' · ' + opensTxt(a.opens) + '</span>' +
+      '<span class="at-bar"><i style="width:' + (max ? Math.max(1, Math.round(a.ms / max * 100)) : 0) + '%"></i></span></span>' +
+      '<button class="del" data-pkg="' + esc(a.pkg) + '" data-act="' + btn + '">' + (btn === 'watch' ? 'Watch' : 'Remove') + '</button></li>';
+  }
+  function paintAppTime() {
+    if (!AT_OK || $('apptime').hidden) return;
+    let ok = false;
+    try { ok = FocusAndroid.usageAccess(); } catch (e) {}
+    $('atPerm').hidden = ok; $('atBody').hidden = !ok;
+    if (!ok) { $('atSub').textContent = 'Needs one permission first'; return; }
+    let used = [];
+    try { used = JSON.parse(FocusAndroid.appUsage()); } catch (e) {}
+    const byPkg = {}; used.forEach(a => { byPkg[a.pkg] = a; });
+    const names = AT.watched.some(p => !byPkg[p]) ? atAllApps() : {};
+    const watched = AT.watched.map(p => byPkg[p] || { pkg: p, name: names[p] || p, ms: 0, opens: 0 }).sort((a, b) => b.ms - a.ms);
+    const others = used.filter(a => !AT.watched.includes(a.pkg));
+    const max = Math.max(1, ...used.map(a => a.ms));
+    const wMs = watched.reduce((n, a) => n + a.ms, 0), wOpens = watched.reduce((n, a) => n + a.opens, 0);
+    const allMs = used.reduce((n, a) => n + a.ms, 0);
+    $('atHead').textContent = fmtUse(watched.length ? wMs : allMs) + (watched.length ? ' watched' : ' today');
+    $('atSub').textContent = watched.length ? 'Today · ' + opensTxt(wOpens) + ' · ' + fmtUse(allMs) + ' on all apps' : 'On all apps · pick the ones to watch';
+    $('atWatched').innerHTML = watched.length ? watched.map(a => atRow(a, max, 'remove')).join('')
+      : '<li class="empty">No apps watched yet. Tap <b>Watch</b> next to an app below, or add one.</li>';
+    $('atOthers').innerHTML = others.length ? others.map(a => atRow(a, max, 'watch')).join('') : '<li class="empty">Nothing else used today.</li>';
+    atFillIcons($('atBody'));
+  }
+  function atToggle(pkg, on) {
+    const i = AT.watched.indexOf(pkg);
+    if (on && i < 0) AT.watched.push(pkg);
+    if (!on && i >= 0) AT.watched.splice(i, 1);
+    save();
+  }
+  function atPaintPicker() {
+    const q = $('atSearch').value.trim().toLowerCase(), all = atAllApps();
+    const rows = Object.keys(all).map(p => ({ pkg: p, name: all[p] })).sort((a, b) => a.name.localeCompare(b.name))
+      .filter(a => !q || a.name.toLowerCase().includes(q));
+    $('atAll').innerHTML = rows.length ? rows.map(a => {
+      const on = AT.watched.includes(a.pkg);
+      return '<li>' + atImg(a.pkg) + '<span class="at-mid"><span class="at-name">' + esc(a.name) +
+        '</span></span><button class="del' + (on ? ' arm' : '') + '" data-pkg="' + esc(a.pkg) + '" data-act="' + (on ? 'remove' : 'watch') + '">' +
+        (on ? 'Watching' : 'Watch') + '</button></li>';
+    }).join('') : '<li class="empty">No app matches.</li>';
+    atFillIcons($('atAll'));
+  }
+  function atShowTabs() {
+    const show = AT_OK && AT.on;
+    $('atTab').hidden = !show;
+    tabsEl.classList.toggle('five', show);
+    $('setBox').hidden = !AT_OK;
+    $('atSwitch').setAttribute('aria-checked', String(AT.on));
+    if (!show && !$('apptime').hidden) showTab('progress');
+    requestAnimationFrame(moveInd);
+  }
+  if (AT_OK) {
+    $('atGrant').addEventListener('click', () => { try { FocusAndroid.openUsageAccess(); } catch (e) {} });
+    $('atSwitch').addEventListener('click', () => { AT.on = !AT.on; save(); atShowTabs(); });
+    $('atAdd').addEventListener('click', () => { atNames = null; $('atSearch').value = ''; $('atPick').hidden = false; atPaintPicker(); });
+    $('atPickDone').addEventListener('click', () => { $('atPick').hidden = true; paintAppTime(); });
+    $('atSearch').addEventListener('input', atPaintPicker);
+    [$('atWatched'), $('atOthers'), $('atAll')].forEach(list => list.addEventListener('click', e => {
+      const b = e.target.closest('button[data-pkg]');
+      if (!b) return;
+      atToggle(b.dataset.pkg, b.dataset.act === 'watch');
+      if (list === $('atAll')) atPaintPicker(); else paintAppTime();
+    }));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) paintAppTime(); }); // back from the settings screen
+    setInterval(paintAppTime, 30000);
+  }
+  atShowTabs();
 
   // ---- boot
   showPick(S.pick);

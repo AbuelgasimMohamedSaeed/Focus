@@ -1,5 +1,11 @@
 # Changelog
 
+## Android app 1.2 (2026-11-13): App Time, stage 1
+- New App Time page (Android): minutes and number of opens per app today, read from Android's own usage records.
+- Pick which apps to watch; add or remove any app, with search.
+- Settings › App Time page switch hides the page completely.
+- Needs "Usage access", which the page walks you through. Everything stays on the device.
+
 ## Android app 1.1 (2026-11-13)
 - Line at the top of the screen: while a sit runs and Focus is closed, a thin line across the top shrinks as time passes (grows when counting up) and turns amber when time is up.
 - Mini window: Focus floats in a small window over your other apps. Drag it by its top bar; tap anywhere in it to count Dhikr; ✕ closes it, ⤢ opens the full app.

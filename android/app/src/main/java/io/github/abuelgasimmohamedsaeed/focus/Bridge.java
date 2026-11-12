@@ -54,6 +54,36 @@ final class Bridge {
         activity.runOnUiThread(() -> activity.barColor(hex));
     }
 
+    // ---- App Time
+
+    /** True once Usage access is on for Focus. */
+    @JavascriptInterface
+    public boolean usageAccess() {
+        return AppUsage.allowed(app);
+    }
+
+    @JavascriptInterface
+    public void openUsageAccess() {
+        AppUsage.openSettings(activity);
+    }
+
+    /** Today's minutes and opens per app. */
+    @JavascriptInterface
+    public String appUsage() {
+        return AppUsage.today(app);
+    }
+
+    /** All apps with a home-screen icon, for picking which to watch. */
+    @JavascriptInterface
+    public String installedApps() {
+        return AppUsage.installed(app);
+    }
+
+    @JavascriptInterface
+    public String appIcon(String pkg) {
+        return AppUsage.icon(app, pkg);
+    }
+
     @JavascriptInterface
     public String version() {
         return activity.versionName();
