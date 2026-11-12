@@ -8,8 +8,12 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -180,6 +184,19 @@ final class Engine {
         int col = color(s.color);
         if (col != 0) b.setColor(col);
         return b.build();
+    }
+
+    /** A strong vibration through Android itself, felt even when touch vibration is turned down. */
+    static void buzz(Context c, String kind) {
+        Vibrator v = Build.VERSION.SDK_INT >= 31
+                ? c.getSystemService(VibratorManager.class).getDefaultVibrator()
+                : c.getSystemService(Vibrator.class);
+        if (v == null || !v.hasVibrator()) return;
+        VibrationEffect e;
+        if ("goal".equals(kind)) e = VibrationEffect.createWaveform(new long[]{0, 300, 120, 300}, -1);
+        else if ("end".equals(kind)) e = VibrationEffect.createWaveform(new long[]{0, 400, 200, 400}, -1);
+        else e = VibrationEffect.createOneShot(55, v.hasAmplitudeControl() ? 255 : VibrationEffect.DEFAULT_AMPLITUDE);
+        v.vibrate(e, new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
     }
 
     /** The recorded bell for a sound name: the single strike, or the full ending with its repeats. */

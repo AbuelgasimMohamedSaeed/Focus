@@ -7,8 +7,10 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Insets;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -179,9 +181,9 @@ public class MainActivity extends Activity {
     /** The page started or ended a sit. */
     void sitChanged(boolean running) {
         keepScreenOn(running);
-        if (running && !Settings.canDrawOverlays(this) && !prefs().getBoolean("askedOverlay", false)) {
-            prefs().edit().putBoolean("askedOverlay", true).apply();
-            askOverlay(false);
+        if (running && FocusAccessibility.instance == null && !prefs().getBoolean("askedLine", false)) {
+            prefs().edit().putBoolean("askedLine", true).apply();
+            askLine();
         }
     }
 
@@ -189,7 +191,29 @@ public class MainActivity extends Activity {
         return getSharedPreferences("focus", MODE_PRIVATE);
     }
 
-    /** "Display over other apps" lets Focus draw the top line and the mini window. */
+    /** Accessibility lets Focus draw the line over the status bar, at the very top of the screen. */
+    void askLine() {
+        if (isFinishing() || isDestroyed()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("Line at the top of the screen")
+                .setMessage("While you sit with Focus closed, a thin line along the very top of the screen shows the time left. "
+                        + "To draw over the clock and battery, Focus needs Accessibility.\n\n"
+                        + "1. Tap Open settings.\n"
+                        + "2. Find Focus (on Xiaomi: under Downloaded apps) and turn it on.\n\n"
+                        + "If Android says it is a restricted setting: open Focus's App info, tap \u22ee at the top right, "
+                        + "choose Allow restricted settings, and try again.\n\n"
+                        + "Focus does not read anything on your screen.")
+                .setPositiveButton("Open settings", (d, w) -> {
+                    try {
+                        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                    } catch (Exception ignored) {
+                    }
+                })
+                .setNegativeButton("Not now", null)
+                .show();
+    }
+
+    /** "Display over other apps" lets Focus show the mini window. */
     void askOverlay(boolean forMini) {
         if (isFinishing() || isDestroyed()) return;
         new AlertDialog.Builder(this)
@@ -211,7 +235,11 @@ public class MainActivity extends Activity {
         if (miniShown || !Settings.canDrawOverlays(this)) return;
         if (custom != null) exitFullScreen();
         float d = getResources().getDisplayMetrics().density;
-        int w = Math.round(300 * d), h = Math.round(262 * d), bar = Math.round(28 * d);
+        int screenW = getResources().getDisplayMetrics().widthPixels, screenH = getResources().getDisplayMetrics().heightPixels;
+        int bar = Math.round(22 * d);
+        // starts small; drag the corner to make it bigger, and it remembers your size
+        int w = clamp(prefs().getInt("miniW", Math.round(210 * d)), Math.round(150 * d), screenW - Math.round(16 * d));
+        int h = clamp(prefs().getInt("miniH", Math.round(176 * d) + bar), Math.round(110 * d) + bar, Math.round(screenH * .7f));
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -232,7 +260,7 @@ public class MainActivity extends Activity {
         TextView close = new TextView(this);
         close.setText("\u2715");
         close.setTextColor(0xFF8B8A86);
-        close.setTextSize(14);
+        close.setTextSize(12);
         close.setGravity(Gravity.CENTER);
         close.setContentDescription("Close mini window");
         close.setOnClickListener(v -> closeMini(false));
@@ -246,7 +274,6 @@ public class MainActivity extends Activity {
                         | (Sit.load(this) != null ? WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON : 0),
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.START;
-        int screenW = getResources().getDisplayMetrics().widthPixels;
         lp.x = prefs().getInt("miniX", screenW - w - Math.round(12 * d));
         lp.y = prefs().getInt("miniY", Math.round(90 * d));
         handle.setOnTouchListener((v, e) -> {
@@ -268,12 +295,47 @@ public class MainActivity extends Activity {
             }
         });
 
+        FrameLayout content = new FrameLayout(this);
+        View grip = new View(this) { // resize handle: two short diagonal lines in the bottom-right corner
+            private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override
+            protected void onDraw(Canvas c) {
+                p.setColor(0xFF6A6A72);
+                p.setStrokeWidth(1.6f * d);
+                p.setStrokeCap(Paint.Cap.ROUND);
+                float s = getWidth(), m = 6 * d;
+                c.drawLine(s - m, s * .45f, s * .45f, s - m, p);
+                c.drawLine(s - m, s * .72f, s * .72f, s - m, p);
+            }
+        };
+        grip.setContentDescription("Resize mini window");
+        grip.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    dragX = e.getRawX() - lp.width;
+                    dragY = e.getRawY() - lp.height;
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    lp.width = clamp(Math.round(e.getRawX() - dragX), Math.round(150 * d), screenW - Math.round(16 * d));
+                    lp.height = clamp(Math.round(e.getRawY() - dragY), Math.round(110 * d) + bar, Math.round(screenH * .7f));
+                    try { wm.updateViewLayout(box, lp); } catch (Exception ignored) {}
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    prefs().edit().putInt("miniW", lp.width).putInt("miniH", lp.height).apply();
+                    return true;
+                default:
+                    return false;
+            }
+        });
         root.removeView(web);
-        box.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
+        content.addView(web, new FrameLayout.LayoutParams(-1, -1));
+        int gs = Math.round(26 * d);
+        content.addView(grip, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
+        box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
         try {
             wm.addView(box, lp);
         } catch (Exception e) { // the phone refused: put the page back
-            box.removeView(web);
+            content.removeView(web);
             root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
             web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
             return;
@@ -306,6 +368,10 @@ public class MainActivity extends Activity {
             web.onPause();
             web.pauseTimers();
         }
+    }
+
+    private static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, Math.max(lo, v)));
     }
 
     void keepScreenOn(boolean on) {

@@ -383,6 +383,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <button class="mini-back" id="cBack" title="Back to full view" aria-label="Back to full view"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg></button></div>
   <div class="mini-big" id="cBig"></div><div class="mini-sub" id="cSub"></div><div class="mini-row" id="cRow"></div>
 </div>
+<div class="at-pick sheet" id="dzSheet" hidden>
+  <header><h2>Dhikr history</h2><button class="mini" id="dzSheetDone">Done</button></header>
+  <ol class="log dz-hist" id="dzHist"></ol>
+</div>
 <div class="at-pick" id="atPick" hidden>
   <header><h2>Apps to watch</h2><button class="mini" id="atPickDone">Done</button></header>
   <input class="at-search" id="atSearch" type="search" placeholder="Search apps" autocomplete="off" aria-label="Search apps">
@@ -423,6 +427,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <button data-sound="bowl" aria-pressed="false">Bowl</button>
         <button data-sound="tingsha" aria-pressed="false">Tingsha</button>
         <button data-sound="hand" aria-pressed="false">Hand bell</button>
+        <button data-sound="tick" aria-pressed="false">Tick</button>
         <button data-sound="off" aria-pressed="false">Off</button>
       </div>
     </div>
@@ -466,8 +471,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       </div>
     </div>
     <p class="hint" id="dzHint">Type how many you want to count, then press Begin.</p>
-    <div class="label">History</div>
-    <ol class="log dz-hist" id="dzHist"></ol>
+    <button class="mini dz-histbtn" id="dzHistBtn">History</button>
   </section>
 
   <section class="screen" id="urge" hidden>
@@ -536,7 +540,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <ol class="log" id="log"></ol>
     <div id="setBox" hidden>
       <div class="label">Settings</div>
-      <div class="set-row"><span>App Time page<small>See how long you spend in your apps</small></span>
+      <div class="set-row" id="lineRow" hidden><span>Line at the top of the screen<small id="lineState">Shows your time left over any app</small></span>
+        <button class="mini" id="lineBtn">Set up</button></div>
+      <div class="set-row" id="atRow"><span>App Time page<small>See how long you spend in your apps</small></span>
         <button class="switch" id="atSwitch" role="switch" aria-checked="true" aria-label="App Time page"></button></div>
     </div>
     <div class="label">Backup</div>
@@ -583,9 +589,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     <button class="tab" role="tab" data-tab="dhikr" aria-selected="false">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="1.8"/><circle cx="18.5" cy="8.2" r="1.8"/><circle cx="18.5" cy="15.8" r="1.8"/><circle cx="12" cy="19.5" r="1.8"/><circle cx="5.5" cy="15.8" r="1.8"/><circle cx="5.5" cy="8.2" r="1.8"/></svg><span>Dhikr</span>
     </button>
-    <button class="tab" role="tab" data-tab="urge" aria-selected="false">
-      <svg viewBox="0 0 24 24"><path d="M3 12c2.5-4 5-4 7.5 0s5 4 7.5 0 2.5-2 3-2"/></svg><span>Urge</span>
-    </button>
     <button class="tab" role="tab" data-tab="progress" aria-selected="false">
       <svg viewBox="0 0 24 24"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg><span>Progress</span>
     </button>
@@ -627,6 +630,12 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     mini: on => (FocusAndroid.mini ? FocusAndroid.mini(!!on) : false) // floating mini window over other apps
   };
   const ANDROID = !!(window.stillNative && window.stillNative.android);
+  // the Android app vibrates through Android itself (strong, and works on every phone); elsewhere the browser does
+  function buzz(kind) {
+    try { if (window.FocusAndroid && FocusAndroid.vibrate) { FocusAndroid.vibrate(kind); return; } } catch (e) {}
+    const p = { tap: 40, goal: [300, 120, 300], end: [400, 200, 400] }[kind];
+    try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {}
+  }
   const KEY = 'still.v1', STEP = 16, MIN = 5, MAX = 180;
   const $ = id => document.getElementById(id);
   const blank = { pick: 120, goal: 120, start: null, sessions: [], urges: {}, running: null };
@@ -984,12 +993,31 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       src.connect(bp); bp.connect(g); g.connect(out); src.start(now);
     }
   }
-  const soundName = () => (BELLS[S.sound] || S.sound === 'off') ? S.sound : 'ring';
+  const soundName = () => (BELLS[S.sound] || S.sound === 'off' || S.sound === 'tick') ? S.sound : 'ring';
   function bell(vol) {
     if (!actx) return;
     const s = soundName();
     if (s === 'off') return;
-    if (s === 'ring') ring(vol); else strike(BELLS[s], vol);
+    if (s === 'ring' || s === 'tick') ring(vol); else strike(BELLS[s], vol); // Tick still starts and ends with the Ring bell
+  }
+  // Tick: a soft wooden tick-tock every second while the sit runs
+  function clack(freq, vol) {
+    const t = actx.currentTime, n = Math.floor(actx.sampleRate * .035), buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 5);
+    const src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain();
+    src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 5; g.gain.value = vol;
+    src.connect(bp); bp.connect(g); g.connect(actx.destination); src.start(t);
+    const o = actx.createOscillator(), v = actx.createGain();
+    o.frequency.value = freq / 2; v.gain.setValueAtTime(vol * .35, t); v.gain.exponentialRampToValueAtTime(.0001, t + .05);
+    o.connect(v); v.connect(actx.destination); o.start(t); o.stop(t + .06);
+  }
+  let lastTickSec = -1;
+  function tickTock(r, now) {
+    if (soundName() !== 'tick' || !actx || document.hidden) return;
+    const sec = Math.floor((now - r.startAt) / 1000);
+    if (sec === lastTickSec) return;
+    lastTickSec = sec;
+    clack(sec % 2 ? 1500 : 2100, .5);
   }
   const soundSeg = $('soundSeg');
   const showSound = () => soundSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sound === soundName()));
@@ -997,7 +1025,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     const b = e.target.closest('button');
     if (!b) return;
     S.sound = b.dataset.sound; save(); showSound();
-    ensureAudio(); bell(.8);
+    ensureAudio();
+    if (S.sound === 'tick') { if (actx) { clack(2100, .5); setTimeout(() => actx && clack(1500, .5), 1000); } } else bell(.8);
   });
   showSound();
 
@@ -1049,7 +1078,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (!loud) return; // Focus was in the background and Android already rang the bell
     const s = soundName(), rep = BELLS[s] ? BELLS[s].repeat : [0, 4500];
     rep.forEach((ms, i) => setTimeout(() => bell(i ? .7 : 1), ms));
-    try { if (navigator.vibrate) navigator.vibrate([400, 200, 400]); } catch (e) {}
+    buzz('end');
   }
   let lastTick = 0;
   function tick() {
@@ -1073,6 +1102,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         if (k > (r.iv || 0)) { r.iv = k; save(); if (left > 20000 && !late) bell(.4); }
       }
       $('clock').textContent = r.up ? fmtClock(Math.floor((now - r.startAt) / 1000)) : fmtClock(Math.ceil(left / 1000));
+      tickTock(r, now);
       return;
     }
     if (!r.over) { r.over = true; save(); timesUp(!late); paintAdj(); }
@@ -1331,9 +1361,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (c.count === c.goal) {
       replay($('counter'), 'burst');
       ensureAudio(); bell(.4);
-      try { if (navigator.vibrate) navigator.vibrate(200); } catch (e) {}
+      buzz('goal');
     } else if (c.count > c.goal - 10 && c.count < c.goal) { // the last 10 before the goal: a short tap you can feel
-      try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+      buzz('tap');
     }
     save(); paintDhikr();
     replay($('dzNum'), 'bump');
@@ -1351,7 +1381,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   document.addEventListener('click', e => {
     if ($('dhikr').hidden || !$('run').hidden || !$('done').hidden || !DZ.cur) return;
     const t = e.target;
-    if (t.closest && t.closest('.tabs, input, form, #fsBtn')) return;
+    if (t.closest && t.closest('.tabs, input, form, #fsBtn, .sheet')) return;
     if (t.closest && t.closest('button') && !t.closest('#counter')) return;
     countOne(e.clientX || null, e.clientY || null);
   });
@@ -1637,7 +1667,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       row = '<button data-act="undo">Undo 1</button>';
     } else {
       const [n, u] = durParts(S.pick);
-      label = S.label || 'Sit'; big = n; sub = u + ' · scroll to change' + (S.countUp ? ' · counts up' : '');
+      label = S.label || 'Sit'; big = n; sub = u + (ANDROID ? '' : ' · scroll to change') + (S.countUp ? ' · counts up' : '');
       row = '<button class="primary" data-act="start">Start</button>';
     }
     return { label, big, sub, row };
@@ -1765,6 +1795,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   });
   setInterval(paintMini, 250);
 
+  // ---- Dhikr history lives in its own sheet, so the Dhikr screen is only the counter
+  $('dzHistBtn').addEventListener('click', () => { $('dzSheet').hidden = false; });
+  $('dzSheetDone').addEventListener('click', () => { $('dzSheet').hidden = true; });
+
   // ---- App Time (Android): how long and how often each app was used today
   const AT_OK = ANDROID && !!(window.FocusAndroid && FocusAndroid.appUsage);
   if (!S.appTime) S.appTime = { on: true, watched: [] };
@@ -1838,11 +1872,26 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     }).join('') : '<li class="empty">No app matches.</li>';
     atFillIcons($('atAll'));
   }
+  const LINE_OK = ANDROID && !!(window.FocusAndroid && FocusAndroid.lineReady);
+  function paintLineRow() {
+    if (!LINE_OK) return;
+    let on = false;
+    try { on = FocusAndroid.lineReady(); } catch (e) {}
+    $('lineRow').hidden = false;
+    $('lineState').textContent = on ? 'On · shows your time left over any app' : 'Needs Accessibility to draw over the status bar';
+    $('lineBtn').hidden = on;
+  }
+  if (LINE_OK) {
+    $('lineBtn').addEventListener('click', () => { try { FocusAndroid.setupLine(); } catch (e) {} });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) paintLineRow(); });
+    paintLineRow();
+  }
   function atShowTabs() {
     const show = AT_OK && AT.on;
     $('atTab').hidden = !show;
     tabsEl.classList.toggle('five', show);
-    $('setBox').hidden = !AT_OK;
+    $('setBox').hidden = !AT_OK && !LINE_OK;
+    $('atRow').hidden = !AT_OK;
     $('atSwitch').setAttribute('aria-checked', String(AT.on));
     if (!show && !$('apptime').hidden) showTab('progress');
     requestAnimationFrame(moveInd);

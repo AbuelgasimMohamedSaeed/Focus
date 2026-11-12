@@ -54,6 +54,23 @@ final class Bridge {
         activity.runOnUiThread(() -> activity.barColor(hex));
     }
 
+    /** A vibration made by Android itself: "tap" (short and strong), "goal" or "end". */
+    @JavascriptInterface
+    public void vibrate(String kind) {
+        Engine.buzz(app, kind);
+    }
+
+    /** True when the line can be drawn over the status bar (Focus's Accessibility service is on). */
+    @JavascriptInterface
+    public boolean lineReady() {
+        return FocusAccessibility.instance != null;
+    }
+
+    @JavascriptInterface
+    public void setupLine() {
+        activity.runOnUiThread(activity::askLine);
+    }
+
     // ---- App Time
 
     /** True once Usage access is on for Focus. */

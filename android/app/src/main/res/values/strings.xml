@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Focus</string>
+    <string name="accessibility_desc">Lets Focus draw the line at the very top of your screen that shows the time left while you sit. Focus does not read anything on your screen.</string>
 </resources>

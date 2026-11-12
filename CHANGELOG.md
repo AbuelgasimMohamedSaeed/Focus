@@ -1,5 +1,13 @@
 # Changelog
 
+## Android app 1.3 (2026-11-13)
+- Line at the top of the screen now draws over the status bar, through Focus's Accessibility service (which reads nothing on screen). It redraws only when it would move a pixel, and never with the screen off.
+- Mini window opens small (Sit timer or Dhikr) and can be resized from its bottom-right corner; it remembers the size.
+- Dhikr vibration goes through Android itself: a strong tap on each of the last 10, a double buzz at the goal.
+- New Tick sound: a soft tick-tock every second while the sit runs (with the Ring bell at the start and end).
+- Dhikr history moved behind a History button, so the Dhikr screen is only the counter.
+- The Urge tab is gone.
+
 ## Android app 1.2 (2026-11-13): App Time, stage 1
 - New App Time page (Android): minutes and number of opens per app today, read from Android's own usage records.
 - Pick which apps to watch; add or remove any app, with search.
