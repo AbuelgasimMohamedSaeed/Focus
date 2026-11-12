@@ -406,11 +406,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       <span class="w-en" id="wEn">Every journey begins with one step.</span>
       <span class="w-src"><span id="wSrc"></span><span>Tap for another</span></span>
     </button>
-    <aside class="side" id="whatSide">
-      <div class="side-h">What is this for?</div>
-      <input class="what" id="whatIn" maxlength="40" autocomplete="off" placeholder="Type a name" aria-label="What this timer is for">
-      <div class="chips" id="whatChips" role="group" aria-label="Quick names"></div>
-    </aside>
+    <button class="chip label-chip" id="labelChip" aria-label="Label"><i></i><span id="labelName">Add a label</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
     <div class="dial">
       <div class="readout" aria-live="polite"><span id="readNum">2:00</span><span class="unit" id="readUnit">hr</span></div>
       <div class="ruler-wrap">
@@ -420,8 +416,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <div class="needle" aria-hidden="true"></div>
       </div>
     </div>
-    <button class="pill" id="startBtn">Start</button>
-    <p class="hint">Scroll on the time to change it, 5 minutes per step.<br>You get 10 seconds to settle, then a bell starts your sit.</p>
+    <div class="start-row">
+      <button class="pill" id="startBtn">Start</button>
+      <button class="round-btn" id="sitSetBtn" aria-label="Timer settings" title="Bell, interval and timer"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
+  </section>
+
+  <div class="at-pick sheet sit-sheet" id="sitSheet" hidden>
+    <header><h2>Timer settings</h2><button class="mini" id="sitSetDone">Done</button></header>
     <div class="sound">
       <span>Bell sound</span>
       <div class="seg small" id="soundSeg" role="group" aria-label="Bell sound">
@@ -450,7 +452,17 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <button data-up="1" aria-pressed="false">Count up from 0</button>
       </div>
     </div>
-  </section>
+    <p class="hint" style="text-align:start">Scroll or drag the time to change it, 5 minutes per step. You get 10 seconds to settle, then a bell starts your sit.</p>
+  </div>
+  <div class="at-pick sheet" id="labelSheet" hidden>
+    <header><h2>Labels</h2><button class="mini" id="labelDone">Done</button></header>
+    <ul class="at-list lbl-list" id="labelList"></ul>
+    <form class="lbl-new" id="labelForm" novalidate>
+      <input class="at-search" id="labelNew" maxlength="40" placeholder="New label, e.g. Study" autocomplete="off" aria-label="New label name">
+      <div class="swatches" id="labelSwatches" role="group" aria-label="Label color"></div>
+      <button class="pill" type="submit">Add label</button>
+    </form>
+  </div>
 
   <section class="screen" id="dhikr" hidden>
     <header class="cap">
@@ -1095,7 +1107,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (min >= 1) countUp($('doneTime'), min, m => durParts(m).join(' '), 1200);
     $('doneSub').textContent = (r.label ? r.label + ' · ' : '') + (early ? (min >= 1 ? 'Ended early · logged' : 'Ended early · under a minute, not logged')
       : extra > 0 ? 'Session complete · ' + extra + ' min extra' : 'Session complete');
-    render(); paintChips();
+    render(); paintLabelChip();
     $('doneCap').textContent = todayLine(stats());
     newWisdom();
     $('done').hidden = false;
@@ -1130,8 +1142,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (S.running) return;
     ensureAudio();
     const now = Date.now();
-    const label = $('whatIn').value.trim().slice(0, 40);
-    S.label = label;
+    const label = (S.label || '').trim().slice(0, 40);
     if (label) labelColor(label, true);
     S.running = { startAt: now + SETTLE, endAt: now + SETTLE + S.pick * 60000, planned: S.pick, up: !!S.countUp };
     if (label) S.running.label = label;
@@ -1156,7 +1167,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     S.countUp = b.dataset.up === '1'; save(); showMode();
   });
   showMode();
-  $('whatIn').value = S.label || '';
   // label colors: each name gets the next free color and keeps it
   const LABEL_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
   function labelColor(name, keep) {
@@ -1173,29 +1183,69 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     return LABEL_COLORS[S.colors[k]];
   }
   const dotHtml = name => name ? '<span class="lbl-dot" style="background:' + labelColor(name, false) + '"></span>' : '';
-  // quick names: your most recent names first, then common ones
-  const DEFAULT_NAMES = ['Meditation', 'Study', 'Qur\u2019an', 'Java', 'Reading'];
-  function paintChips() {
+  // ---- labels: your own list, each with a color. Someone new starts with a few general ones.
+  if (!Array.isArray(S.labelList)) {
     const seen = new Set(), names = [];
-    S.sessions.slice().reverse().forEach(x => { const n = x.label && x.label.trim(); if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } });
-    DEFAULT_NAMES.forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } });
-    const cur = ($('whatIn').value || '').trim().toLowerCase();
-    const shown = names.slice(0, 6);
-    shown.forEach(n => labelColor(n, true));
-    $('whatChips').innerHTML = shown.map(n =>
-      '<button class="chip" style="--c:' + labelColor(n, true) + '" data-name="' + esc(n) + '" aria-pressed="' + (n.toLowerCase() === cur) + '"><i></i>' + esc(n) + '</button>').join('');
-    $('whatIn').style.setProperty('--c', cur ? labelColor(cur, false) : '');
+    const add = n => { n = (n || '').trim(); if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } };
+    const before = S.sessions.length || Object.keys(S.colors || {}).length;
+    S.sessions.slice().reverse().forEach(x => add(x.label));
+    (before ? ['Meditation', 'Study', 'Qur’an', 'Java', 'Reading'] : ['Study', 'Work', 'Reading']).forEach(add);
+    S.labelList = names.slice(0, 12);
+    S.labelList.forEach(n => labelColor(n, true));
   }
-  $('whatChips').addEventListener('click', e => {
-    const b = e.target.closest('.chip');
-    if (!b) return;
-    const same = $('whatIn').value.trim().toLowerCase() === b.dataset.name.toLowerCase();
-    $('whatIn').value = same ? '' : b.dataset.name; // tap the chosen one again to clear it
-    S.label = $('whatIn').value; save(); paintChips();
+  let newColor = -1, lblArm = '';
+  function paintLabelChip() {
+    const n = (S.label || '').trim();
+    $('labelName').textContent = n || 'Add a label';
+    $('labelChip').classList.toggle('none', !n);
+    $('labelChip').style.setProperty('--c', n ? labelColor(n, true) : '');
+  }
+  function paintLabelList() {
+    const cur = (S.label || '').trim().toLowerCase();
+    $('labelList').innerHTML = '<li><button class="lbl-pick" data-pick=""><i style="--c:transparent;border:1px solid var(--faint)"></i><b>No label</b>' +
+      (cur ? '' : '<span class="on">✓</span>') + '</button><span></span></li>' +
+      S.labelList.map(n => '<li><button class="lbl-pick" data-pick="' + esc(n) + '"><i style="--c:' + labelColor(n, true) + '"></i><b>' + esc(n) + '</b>' +
+        (n.toLowerCase() === cur ? '<span class="on">✓</span>' : '') + '</button>' +
+        '<button class="del' + (lblArm === n ? ' arm' : '') + '" data-del="' + esc(n) + '">' + (lblArm === n ? 'Sure?' : 'Delete') + '</button></li>').join('');
+    if (newColor < 0) {
+      const used = S.labelList.map(n => S.colors[n.toLowerCase()]);
+      newColor = Math.max(0, LABEL_COLORS.findIndex((_, j) => !used.includes(j)));
+    }
+    $('labelSwatches').innerHTML = LABEL_COLORS.map((c, i) =>
+      '<button type="button" style="--c:' + c + '" data-c="' + i + '" aria-label="Color ' + (i + 1) + '" aria-pressed="' + (i === newColor) + '"></button>').join('');
+  }
+  $('labelChip').addEventListener('click', () => { lblArm = ''; newColor = -1; paintLabelList(); $('labelSheet').hidden = false; });
+  $('labelDone').addEventListener('click', () => { $('labelSheet').hidden = true; });
+  $('labelList').addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]'), del = e.target.closest('[data-del]');
+    if (pick) {
+      S.label = pick.dataset.pick; save(); paintLabelChip();
+      $('labelSheet').hidden = true;
+    } else if (del) {
+      const n = del.dataset.del;
+      if (lblArm !== n) { lblArm = n; paintLabelList(); return; } // first tap asks, second deletes
+      S.labelList = S.labelList.filter(x => x !== n);
+      if ((S.label || '').toLowerCase() === n.toLowerCase()) S.label = '';
+      lblArm = ''; save(); paintLabelList(); paintLabelChip();
+    }
   });
-  paintChips();
-  $('whatIn').addEventListener('input', () => { S.label = $('whatIn').value.trim().slice(0, 40); clearTimeout(saveT); saveT = setTimeout(save, 400); paintChips(); });
-  $('whatIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('whatIn').blur(); } });
+  $('labelSwatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-c]');
+    if (b) { newColor = +b.dataset.c; paintLabelList(); }
+  });
+  $('labelForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const n = $('labelNew').value.trim().slice(0, 40);
+    if (!n) { $('labelNew').focus(); return; }
+    const k = n.toLowerCase(), have = S.labelList.find(x => x.toLowerCase() === k);
+    if (!have) { S.labelList.unshift(n); S.colors = S.colors || {}; S.colors[k] = newColor; }
+    S.label = have || n; $('labelNew').value = ''; newColor = -1;
+    save(); paintLabelChip(); $('labelSheet').hidden = true;
+  });
+  paintLabelChip();
+  // ---- timer settings (bell, interval, count up or down) live in their own sheet
+  $('sitSetBtn').addEventListener('click', () => { $('sitSheet').hidden = false; });
+  $('sitSetDone').addEventListener('click', () => { $('sitSheet').hidden = true; });
 
   // ---- wisdom: Qur'an verses fetched live (official text + Sahih International), plus a built-in set
   const AYAHS = ['2:45', '2:152', '2:153', '3:139', '3:200', '8:46', '12:87', '13:28', '16:128', '20:25', '20:114', '25:63',

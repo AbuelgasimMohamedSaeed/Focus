@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0 (2026-11-13)
+- Labels: one small chip at the top left of Sit. Tap it to choose a label, add one with its own color, or delete one. Someone new starts with Study, Work and Reading.
+- Sit shows only the time and Start; bell sound, interval bell and count up/down moved to the settings button next to Start.
+
 ## Android app 1.6 (2026-11-13)
 - Mini button opens Focus in the phone's own floating window (Xiaomi's, Samsung's…) when the phone allows it; otherwise Focus's own mini window.
 - Focus's own mini window keeps its shape when you resize it, and everything inside grows and shrinks with it. Pull the line at the bottom down (or up) for full screen; the expand button is gone.

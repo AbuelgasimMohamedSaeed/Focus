@@ -64,28 +64,33 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 /* Sit */
 .dial{flex:1;display:flex;flex-direction:column;justify-content:center;gap:30px;min-height:300px}
 .dial{cursor:ns-resize}
-.what{display:block;width:min(420px,100%);margin:0 auto;height:44px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);font:500 18px var(--sans);text-align:center;cursor:text;transition:border-color .3s}
-.side{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:16px}
-.side-h{font-size:12px;font-weight:500;color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:8px}
-.chip i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--muted));flex:none}
-.what{border-bottom-color:var(--c,var(--line))}
-.screen.enter > .side{animation-name:fade}
-@media (min-width:1100px){
-  .side{position:fixed;z-index:5;top:50%;transform:translateY(-50%);left:max(16px,calc(50% - 310px - 250px));width:210px;margin:0;align-items:stretch;
-    padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
-  .side .what{width:100%;height:38px;font-size:15px;text-align:left}
-  .side .chips{flex-direction:column;align-items:stretch}
-  .side .chip{height:34px;justify-content:flex-start;font-size:13px;border-radius:10px}
-}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted));flex:none}
+/* the label: one small chip at the top left; tap it for the list */
+.label-chip{align-self:flex-start;margin-top:12px;color:var(--fg)}
+.label-chip.none{color:var(--muted)}
+.label-chip svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;opacity:.6}
+.start-row{display:flex;gap:10px;align-items:center}
+.start-row .pill{flex:1}
+.round-btn{flex:none;width:58px;height:58px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);display:grid;place-items:center;cursor:pointer}
+.round-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.at-list.lbl-list li{grid-template-columns:1fr auto}
+.lbl-pick{display:flex;align-items:center;gap:12px;background:none;border:0;color:var(--fg);font:500 16px var(--sans);text-align:start;padding:6px 0;cursor:pointer;min-width:0}
+.lbl-pick i{width:12px;height:12px;border-radius:50%;background:var(--c,var(--faint));flex:none}
+.lbl-pick b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbl-pick .on{margin-inline-start:auto;color:var(--muted);font-size:14px}
+.lbl-new{display:flex;flex-direction:column;gap:12px;padding:16px 0 24px;border-top:1px solid var(--line)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;background:var(--c);cursor:pointer;outline-offset:2px}
+.swatches button[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 3px var(--bg)}
+.sit-sheet .sound{justify-content:flex-start;margin-top:18px}
+.sit-sheet .sound > span{width:100%;font-size:13px}
+.sit-sheet .seg.small{justify-content:flex-start}
 .lbl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;position:relative;top:-1px}
 .chip{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);font:500 12px var(--sans);cursor:pointer;transition:background .25s,color .25s,border-color .25s,transform .2s var(--ease)}
 .chip:hover{color:var(--fg);border-color:var(--faint)}
 .chip:active{transform:scale(.95)}
 .chip[aria-pressed="true"]{background:color-mix(in srgb,var(--c,var(--fg)) 24%,var(--card));border-color:var(--c,var(--fg));color:var(--fg)}
-.what::placeholder{color:var(--muted);opacity:.7}
-.what:focus{outline:none;border-bottom-color:var(--fg)}
 .readout{font-family:var(--mono);font-size:clamp(64px,22vw,100px);font-weight:500;text-align:center;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}
 .unit{font-size:.26em;color:var(--muted);margin-left:.35em;letter-spacing:0}
 .ruler-wrap{position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(90deg,transparent,#000 24%,#000 76%,transparent)}
@@ -299,7 +304,7 @@ body.pip{overflow:hidden;margin:0}
 .compact-view{position:fixed;inset:0;z-index:40;background:var(--bg)}
 .compact-view:not([hidden]) > *{animation:rise .5s var(--ease) backwards}
 .compact-view:not([hidden]) > .mini-top{position:absolute;animation-name:fade}
-body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.compact .side{visibility:hidden}
+body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibility:hidden}
 .pipview{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;position:relative;user-select:none;-webkit-user-select:none}
 .mini-top{position:absolute;top:8px;left:12px;right:8px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:500;color:var(--muted)}
 .mini-back{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:grid;place-items:center;transition:color .2s}
@@ -383,7 +388,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 @media (pointer:coarse){
   .seg.small button{height:40px;padding:0 16px;font-size:13px}
   .chip{height:38px;padding:0 14px;font-size:13px}
-  .side .chip{height:42px}
   .del{height:36px;padding:0 14px}
   .mini{height:44px}
   .tab{padding:8px 22px}
@@ -392,7 +396,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   .fs{width:46px;height:46px}
   .mini-open{right:calc(max(12px,env(safe-area-inset-right,0px)) + 54px)}
   .hist-btn{right:calc(max(12px,env(safe-area-inset-right,0px)) + 108px)}
-  .what{height:48px}
   button,.chip,.wisdom{-webkit-tap-highlight-color:transparent}
 }
 @media (min-width:900px) and (min-height:700px){
@@ -445,11 +448,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       <span class="w-en" id="wEn">Every journey begins with one step.</span>
       <span class="w-src"><span id="wSrc"></span><span>Tap for another</span></span>
     </button>
-    <aside class="side" id="whatSide">
-      <div class="side-h">What is this for?</div>
-      <input class="what" id="whatIn" maxlength="40" autocomplete="off" placeholder="Type a name" aria-label="What this timer is for">
-      <div class="chips" id="whatChips" role="group" aria-label="Quick names"></div>
-    </aside>
+    <button class="chip label-chip" id="labelChip" aria-label="Label"><i></i><span id="labelName">Add a label</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
     <div class="dial">
       <div class="readout" aria-live="polite"><span id="readNum">2:00</span><span class="unit" id="readUnit">hr</span></div>
       <div class="ruler-wrap">
@@ -459,8 +458,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <div class="needle" aria-hidden="true"></div>
       </div>
     </div>
-    <button class="pill" id="startBtn">Start</button>
-    <p class="hint">Scroll on the time to change it, 5 minutes per step.<br>You get 10 seconds to settle, then a bell starts your sit.</p>
+    <div class="start-row">
+      <button class="pill" id="startBtn">Start</button>
+      <button class="round-btn" id="sitSetBtn" aria-label="Timer settings" title="Bell, interval and timer"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
+  </section>
+
+  <div class="at-pick sheet sit-sheet" id="sitSheet" hidden>
+    <header><h2>Timer settings</h2><button class="mini" id="sitSetDone">Done</button></header>
     <div class="sound">
       <span>Bell sound</span>
       <div class="seg small" id="soundSeg" role="group" aria-label="Bell sound">
@@ -489,7 +494,17 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <button data-up="1" aria-pressed="false">Count up from 0</button>
       </div>
     </div>
-  </section>
+    <p class="hint" style="text-align:start">Scroll or drag the time to change it, 5 minutes per step. You get 10 seconds to settle, then a bell starts your sit.</p>
+  </div>
+  <div class="at-pick sheet" id="labelSheet" hidden>
+    <header><h2>Labels</h2><button class="mini" id="labelDone">Done</button></header>
+    <ul class="at-list lbl-list" id="labelList"></ul>
+    <form class="lbl-new" id="labelForm" novalidate>
+      <input class="at-search" id="labelNew" maxlength="40" placeholder="New label, e.g. Study" autocomplete="off" aria-label="New label name">
+      <div class="swatches" id="labelSwatches" role="group" aria-label="Label color"></div>
+      <button class="pill" type="submit">Add label</button>
+    </form>
+  </div>
 
   <section class="screen" id="dhikr" hidden>
     <header class="cap">
@@ -1134,7 +1149,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (min >= 1) countUp($('doneTime'), min, m => durParts(m).join(' '), 1200);
     $('doneSub').textContent = (r.label ? r.label + ' · ' : '') + (early ? (min >= 1 ? 'Ended early · logged' : 'Ended early · under a minute, not logged')
       : extra > 0 ? 'Session complete · ' + extra + ' min extra' : 'Session complete');
-    render(); paintChips();
+    render(); paintLabelChip();
     $('doneCap').textContent = todayLine(stats());
     newWisdom();
     $('done').hidden = false;
@@ -1169,8 +1184,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     if (S.running) return;
     ensureAudio();
     const now = Date.now();
-    const label = $('whatIn').value.trim().slice(0, 40);
-    S.label = label;
+    const label = (S.label || '').trim().slice(0, 40);
     if (label) labelColor(label, true);
     S.running = { startAt: now + SETTLE, endAt: now + SETTLE + S.pick * 60000, planned: S.pick, up: !!S.countUp };
     if (label) S.running.label = label;
@@ -1195,7 +1209,6 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     S.countUp = b.dataset.up === '1'; save(); showMode();
   });
   showMode();
-  $('whatIn').value = S.label || '';
   // label colors: each name gets the next free color and keeps it
   const LABEL_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
   function labelColor(name, keep) {
@@ -1212,29 +1225,69 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     return LABEL_COLORS[S.colors[k]];
   }
   const dotHtml = name => name ? '<span class="lbl-dot" style="background:' + labelColor(name, false) + '"></span>' : '';
-  // quick names: your most recent names first, then common ones
-  const DEFAULT_NAMES = ['Meditation', 'Study', 'Qur\u2019an', 'Java', 'Reading'];
-  function paintChips() {
+  // ---- labels: your own list, each with a color. Someone new starts with a few general ones.
+  if (!Array.isArray(S.labelList)) {
     const seen = new Set(), names = [];
-    S.sessions.slice().reverse().forEach(x => { const n = x.label && x.label.trim(); if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } });
-    DEFAULT_NAMES.forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } });
-    const cur = ($('whatIn').value || '').trim().toLowerCase();
-    const shown = names.slice(0, 6);
-    shown.forEach(n => labelColor(n, true));
-    $('whatChips').innerHTML = shown.map(n =>
-      '<button class="chip" style="--c:' + labelColor(n, true) + '" data-name="' + esc(n) + '" aria-pressed="' + (n.toLowerCase() === cur) + '"><i></i>' + esc(n) + '</button>').join('');
-    $('whatIn').style.setProperty('--c', cur ? labelColor(cur, false) : '');
+    const add = n => { n = (n || '').trim(); if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); names.push(n); } };
+    const before = S.sessions.length || Object.keys(S.colors || {}).length;
+    S.sessions.slice().reverse().forEach(x => add(x.label));
+    (before ? ['Meditation', 'Study', 'Qur’an', 'Java', 'Reading'] : ['Study', 'Work', 'Reading']).forEach(add);
+    S.labelList = names.slice(0, 12);
+    S.labelList.forEach(n => labelColor(n, true));
   }
-  $('whatChips').addEventListener('click', e => {
-    const b = e.target.closest('.chip');
-    if (!b) return;
-    const same = $('whatIn').value.trim().toLowerCase() === b.dataset.name.toLowerCase();
-    $('whatIn').value = same ? '' : b.dataset.name; // tap the chosen one again to clear it
-    S.label = $('whatIn').value; save(); paintChips();
+  let newColor = -1, lblArm = '';
+  function paintLabelChip() {
+    const n = (S.label || '').trim();
+    $('labelName').textContent = n || 'Add a label';
+    $('labelChip').classList.toggle('none', !n);
+    $('labelChip').style.setProperty('--c', n ? labelColor(n, true) : '');
+  }
+  function paintLabelList() {
+    const cur = (S.label || '').trim().toLowerCase();
+    $('labelList').innerHTML = '<li><button class="lbl-pick" data-pick=""><i style="--c:transparent;border:1px solid var(--faint)"></i><b>No label</b>' +
+      (cur ? '' : '<span class="on">✓</span>') + '</button><span></span></li>' +
+      S.labelList.map(n => '<li><button class="lbl-pick" data-pick="' + esc(n) + '"><i style="--c:' + labelColor(n, true) + '"></i><b>' + esc(n) + '</b>' +
+        (n.toLowerCase() === cur ? '<span class="on">✓</span>' : '') + '</button>' +
+        '<button class="del' + (lblArm === n ? ' arm' : '') + '" data-del="' + esc(n) + '">' + (lblArm === n ? 'Sure?' : 'Delete') + '</button></li>').join('');
+    if (newColor < 0) {
+      const used = S.labelList.map(n => S.colors[n.toLowerCase()]);
+      newColor = Math.max(0, LABEL_COLORS.findIndex((_, j) => !used.includes(j)));
+    }
+    $('labelSwatches').innerHTML = LABEL_COLORS.map((c, i) =>
+      '<button type="button" style="--c:' + c + '" data-c="' + i + '" aria-label="Color ' + (i + 1) + '" aria-pressed="' + (i === newColor) + '"></button>').join('');
+  }
+  $('labelChip').addEventListener('click', () => { lblArm = ''; newColor = -1; paintLabelList(); $('labelSheet').hidden = false; });
+  $('labelDone').addEventListener('click', () => { $('labelSheet').hidden = true; });
+  $('labelList').addEventListener('click', e => {
+    const pick = e.target.closest('[data-pick]'), del = e.target.closest('[data-del]');
+    if (pick) {
+      S.label = pick.dataset.pick; save(); paintLabelChip();
+      $('labelSheet').hidden = true;
+    } else if (del) {
+      const n = del.dataset.del;
+      if (lblArm !== n) { lblArm = n; paintLabelList(); return; } // first tap asks, second deletes
+      S.labelList = S.labelList.filter(x => x !== n);
+      if ((S.label || '').toLowerCase() === n.toLowerCase()) S.label = '';
+      lblArm = ''; save(); paintLabelList(); paintLabelChip();
+    }
   });
-  paintChips();
-  $('whatIn').addEventListener('input', () => { S.label = $('whatIn').value.trim().slice(0, 40); clearTimeout(saveT); saveT = setTimeout(save, 400); paintChips(); });
-  $('whatIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('whatIn').blur(); } });
+  $('labelSwatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-c]');
+    if (b) { newColor = +b.dataset.c; paintLabelList(); }
+  });
+  $('labelForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const n = $('labelNew').value.trim().slice(0, 40);
+    if (!n) { $('labelNew').focus(); return; }
+    const k = n.toLowerCase(), have = S.labelList.find(x => x.toLowerCase() === k);
+    if (!have) { S.labelList.unshift(n); S.colors = S.colors || {}; S.colors[k] = newColor; }
+    S.label = have || n; $('labelNew').value = ''; newColor = -1;
+    save(); paintLabelChip(); $('labelSheet').hidden = true;
+  });
+  paintLabelChip();
+  // ---- timer settings (bell, interval, count up or down) live in their own sheet
+  $('sitSetBtn').addEventListener('click', () => { $('sitSheet').hidden = false; });
+  $('sitSetDone').addEventListener('click', () => { $('sitSheet').hidden = true; });
 
   // ---- wisdom: Qur'an verses fetched live (official text + Sahih International), plus a built-in set
   const AYAHS = ['2:45', '2:152', '2:153', '3:139', '3:200', '8:46', '12:87', '13:28', '16:128', '20:25', '20:114', '25:63',
