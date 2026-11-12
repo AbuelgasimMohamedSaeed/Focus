@@ -1,6 +1,7 @@
 package io.github.abuelgasimmohamedsaeed.focus;
 
 import android.content.Context;
+import android.provider.Settings;
 import android.webkit.JavascriptInterface;
 
 /** What the web app can ask of Android. Seen in the page as window.FocusAndroid. */
@@ -18,7 +19,21 @@ final class Bridge {
     public void sitState(String json) {
         Engine.update(app, json);
         boolean running = Sit.parse(json) != null;
-        activity.runOnUiThread(() -> activity.keepScreenOn(running));
+        activity.runOnUiThread(() -> activity.sitChanged(running));
+    }
+
+    /** Open (true) or close (false) the floating mini window. False when Android first needs the user's permission. */
+    @JavascriptInterface
+    public boolean mini(boolean on) {
+        if (on && !Settings.canDrawOverlays(app)) {
+            activity.runOnUiThread(() -> activity.askOverlay(true));
+            return false;
+        }
+        activity.runOnUiThread(() -> {
+            if (on) activity.openMini();
+            else activity.closeMini(true);
+        });
+        return true;
     }
 
     /** Automatic backup to Download › Focus backups. */

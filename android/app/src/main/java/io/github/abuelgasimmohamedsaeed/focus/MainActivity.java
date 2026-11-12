@@ -9,11 +9,16 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Insets;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
@@ -25,6 +30,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 /** Focus for Android: the online Focus app in a full-screen window, plus what only a real app can do. */
 public class MainActivity extends Activity {
@@ -35,7 +42,13 @@ public class MainActivity extends Activity {
 
     /** True while Focus is on screen; the web app rings the bells itself then. */
     static volatile boolean visible;
+    /** True while the floating mini window shows Focus over other apps. */
+    static volatile boolean miniShown;
     static MainActivity current;
+
+    static boolean onScreen() {
+        return visible || miniShown;
+    }
 
     private FrameLayout root;
     private WebView web;
@@ -44,6 +57,9 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileDone;
     private long loadedAt;
     private String pendingUpdate;
+    private LinearLayout miniBox;
+    private WindowManager.LayoutParams miniLp;
+    private float dragX, dragY;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -95,6 +111,7 @@ public class MainActivity extends Activity {
         super.onResume();
         visible = true;
         current = this;
+        if (miniShown) closeMini(false); // Focus opened from the home screen: take the page back from the mini window
         web.onResume();
         web.resumeTimers();
         stopService(new Intent(this, BellService.class)); // opening Focus quiets a ringing bell
@@ -120,16 +137,19 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         visible = false;
-        Sit sit = Sit.load(this);
-        if (sit != null) Engine.refresh(this, sit); // the live line takes over
-        web.onPause();
-        web.pauseTimers(); // Android rings the bells now, so the page doesn't ring them twice
+        if (!miniShown) { // in the mini window the page keeps running and ringing itself
+            Sit sit = Sit.load(this);
+            if (sit != null) Engine.refresh(this, sit); // the live notification and the top line take over
+            web.onPause();
+            web.pauseTimers(); // Android rings the bells now, so the page doesn't ring them twice
+        }
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
         if (current == this) current = null;
+        if (miniShown) closeMini(false);
         web.destroy();
         super.onDestroy();
     }
@@ -153,6 +173,138 @@ public class MainActivity extends Activity {
         if (bars != null) {
             int dark = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
             bars.setSystemBarsAppearance(Color.luminance(color) > .5f ? dark : 0, dark); // dark icons on a light background
+        }
+    }
+
+    /** The page started or ended a sit. */
+    void sitChanged(boolean running) {
+        keepScreenOn(running);
+        if (running && !Settings.canDrawOverlays(this) && !prefs().getBoolean("askedOverlay", false)) {
+            prefs().edit().putBoolean("askedOverlay", true).apply();
+            askOverlay(false);
+        }
+    }
+
+    private android.content.SharedPreferences prefs() {
+        return getSharedPreferences("focus", MODE_PRIVATE);
+    }
+
+    /** "Display over other apps" lets Focus draw the top line and the mini window. */
+    void askOverlay(boolean forMini) {
+        if (isFinishing() || isDestroyed()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(forMini ? "Mini window" : "Line at the top of the screen")
+                .setMessage((forMini
+                        ? "To float over your other apps, Focus needs \"Display over other apps\"."
+                        : "While you sit with Focus closed, a thin line along the top of the screen can show the time left. "
+                        + "For that, Focus needs \"Display over other apps\".")
+                        + "\n\nTurn it on for Focus, then come back. On Xiaomi phones, also allow "
+                        + "\"Display pop-up windows while running in the background\".")
+                .setPositiveButton("Open settings", (d, w) -> startActivity(new Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))))
+                .setNegativeButton("Not now", null)
+                .show();
+    }
+
+    /** Moves the page into a small window that floats over other apps; drag it by its top bar. */
+    void openMini() {
+        if (miniShown || !Settings.canDrawOverlays(this)) return;
+        if (custom != null) exitFullScreen();
+        float d = getResources().getDisplayMetrics().density;
+        int w = Math.round(300 * d), h = Math.round(262 * d), bar = Math.round(28 * d);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(BG);
+        bg.setCornerRadius(18 * d);
+        bg.setStroke(Math.max(1, Math.round(d)), 0xFF2A2A30);
+        box.setBackground(bg);
+        box.setClipToOutline(true);
+
+        FrameLayout handle = new FrameLayout(this);
+        View grip = new View(this);
+        GradientDrawable gripBg = new GradientDrawable();
+        gripBg.setColor(0xFF4A4A52);
+        gripBg.setCornerRadius(2 * d);
+        grip.setBackground(gripBg);
+        handle.addView(grip, new FrameLayout.LayoutParams(Math.round(36 * d), Math.round(4 * d), Gravity.CENTER));
+        TextView close = new TextView(this);
+        close.setText("\u2715");
+        close.setTextColor(0xFF8B8A86);
+        close.setTextSize(14);
+        close.setGravity(Gravity.CENTER);
+        close.setContentDescription("Close mini window");
+        close.setOnClickListener(v -> closeMini(false));
+        handle.addView(close, new FrameLayout.LayoutParams(bar + Math.round(8 * d), bar, Gravity.END | Gravity.CENTER_VERTICAL));
+        box.addView(handle, new LinearLayout.LayoutParams(-1, bar));
+
+        WindowManager wm = getApplicationContext().getSystemService(WindowManager.class);
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(w, h,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | (Sit.load(this) != null ? WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON : 0),
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.TOP | Gravity.START;
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        lp.x = prefs().getInt("miniX", screenW - w - Math.round(12 * d));
+        lp.y = prefs().getInt("miniY", Math.round(90 * d));
+        handle.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    dragX = lp.x - e.getRawX();
+                    dragY = lp.y - e.getRawY();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    lp.x = Math.round(e.getRawX() + dragX);
+                    lp.y = Math.round(e.getRawY() + dragY);
+                    try { wm.updateViewLayout(box, lp); } catch (Exception ignored) {}
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    prefs().edit().putInt("miniX", lp.x).putInt("miniY", lp.y).apply();
+                    return true;
+                default:
+                    return false;
+            }
+        });
+
+        root.removeView(web);
+        box.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
+        try {
+            wm.addView(box, lp);
+        } catch (Exception e) { // the phone refused: put the page back
+            box.removeView(web);
+            root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
+            web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
+            return;
+        }
+        miniBox = box;
+        miniLp = lp;
+        miniShown = true;
+        Sit sit = Sit.load(this);
+        Engine.refresh(this, sit); // the mini window shows the time, so no notification or top line
+        moveTaskToBack(true);
+    }
+
+    /** Puts the page back into the full app; opens the app too when openApp is true. */
+    void closeMini(boolean openApp) {
+        if (!miniShown) return;
+        if (openApp) startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
+        miniShown = false;
+        try {
+            getApplicationContext().getSystemService(WindowManager.class).removeView(miniBox);
+        } catch (Exception ignored) {
+        }
+        if (web.getParent() instanceof ViewGroup) ((ViewGroup) web.getParent()).removeView(web);
+        root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
+        miniBox = null;
+        miniLp = null;
+        web.evaluateJavascript("window.focusMiniClosed && focusMiniClosed()", null);
+        if (!visible && !openApp) { // closed with the ✕: Focus stays in the background
+            Sit sit = Sit.load(this);
+            if (sit != null) Engine.refresh(this, sit);
+            web.onPause();
+            web.pauseTimers();
         }
     }
 

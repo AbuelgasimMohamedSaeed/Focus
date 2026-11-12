@@ -48,16 +48,19 @@ final class Engine {
             NotificationManager nm = c.getSystemService(NotificationManager.class);
             nm.cancel(ID_LIVE);
             nm.cancel(ID_ALERT);
+            TopLine.update(c, null);
         } else {
             refresh(c, s);
         }
     }
 
-    /** Shows the live line while Focus is out of sight, and hides it while Focus is open. */
+    /** Shows the live notification and the top line while Focus is out of sight, and hides them while Focus is on screen. */
     static void refresh(Context c, Sit s) {
         NotificationManager nm = c.getSystemService(NotificationManager.class);
-        if (s == null || MainActivity.visible) nm.cancel(ID_LIVE);
-        else nm.notify(ID_LIVE, live(c, s));
+        boolean away = s != null && !MainActivity.onScreen();
+        if (away) nm.notify(ID_LIVE, live(c, s));
+        else nm.cancel(ID_LIVE);
+        TopLine.update(c, away ? s : null);
     }
 
     /** An alarm went off: ring the bell if Focus is closed, then set the next one. */
@@ -68,7 +71,7 @@ final class Engine {
             schedule(c, s);
             return;
         }
-        boolean away = !MainActivity.visible, sound = !"off".equals(s.sound);
+        boolean away = !MainActivity.onScreen(), sound = !"off".equals(s.sound);
         if (END.equals(kind)) {
             s.over = true;
             Sit.store(c, s);

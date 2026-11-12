@@ -586,7 +586,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     android: true,
     sitState: s => FocusAndroid.sitState(s ? JSON.stringify(s) : 'null'),
     saveBackup: json => FocusAndroid.saveBackup(json),
-    findBackup: async () => { const j = FocusAndroid.findBackup(); return j ? { json: j } : null; }
+    findBackup: async () => { const j = FocusAndroid.findBackup(); return j ? { json: j } : null; },
+    mini: on => (FocusAndroid.mini ? FocusAndroid.mini(!!on) : false) // floating mini window over other apps
   };
   const ANDROID = !!(window.stillNative && window.stillNative.android);
   const KEY = 'still.v1', STEP = 16, MIN = 5, MAX = 180;
@@ -1594,7 +1595,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       const extra = c.count - c.goal;
       label = 'Dhikr'; big = extra > 0 ? '+' + extra : String(c.count);
       sub = (extra > 0 ? 'Goal ' + c.goal + ' reached · total ' + c.count : (extra === 0 ? 'Goal reached · ' : '') + 'of ' + c.goal) +
-        ' · click anywhere to count';
+        (ANDROID ? ' · tap anywhere to count' : ' · click anywhere to count');
       row = '<button data-act="undo">Undo 1</button>';
     } else {
       const [n, u] = durParts(S.pick);
@@ -1700,7 +1701,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch (e) {} await new Promise(r => setTimeout(r, 200)); }
       compact = { native: true };
       document.body.classList.add('compact'); $('cv').hidden = false; paintMini();
-      try { await window.stillNative.mini(true); } catch (e) {}
+      let ok = true;
+      try { ok = await window.stillNative.mini(true); } catch (e) {}
+      if (ok === false) { compact = null; $('cv').hidden = true; document.body.classList.remove('compact'); } // Android asked for permission first
     } else {
       if (!compact) return;
       compact = null;
@@ -1709,7 +1712,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
     }
   }
-  if (ANDROID || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
+  // the Android app closed the mini window itself (its ✕, or Focus was opened from the home screen)
+  window.focusMiniClosed = () => {
+    if (!compact || !compact.native) return;
+    compact = null;
+    $('cv').hidden = true; document.body.classList.remove('compact');
+    setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); }, 400);
+  };
+  if ((ANDROID && !FocusAndroid.mini) || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
   $('miniBtn').addEventListener('click', () => {
     if (window.stillNative) nativeMini(true);
     else if ('documentPictureInPicture' in window) openMini(true);

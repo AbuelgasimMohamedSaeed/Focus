@@ -1,5 +1,10 @@
 # Changelog
 
+## Android app 1.1 (2026-11-13)
+- Line at the top of the screen: while a sit runs and Focus is closed, a thin line across the top shrinks as time passes (grows when counting up) and turns amber when time is up.
+- Mini window: Focus floats in a small window over your other apps. Drag it by its top bar; tap anywhere in it to count Dhikr; ✕ closes it, ⤢ opens the full app.
+- Both need "Display over other apps", which Focus asks for once.
+
 ## 1.2.0 (2026-11-13)
 - Dhikr: the last 10 taps before your goal vibrate; the goal itself gives a longer buzz.
 - Dhikr: reaching the goal turns the whole screen white until Start fresh; extra counts show big as +1, +2… with the goal and total underneath.

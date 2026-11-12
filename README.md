@@ -57,6 +57,8 @@
 
 The app adds what a website can't do:
 - **Live line:** while a sit runs and Focus is closed, the time left counts down in the notification shade and on the lock screen. On Android 16 it can also show as a chip in the status bar.
+- **Line at the top of the screen:** a thin line across the very top shrinks as your time runs down, over any app (needs "Display over other apps").
+- **Mini window:** Focus floats over your other apps; drag it by its top bar, tap it to count Dhikr.
 - **Bells with Focus closed:** the start, interval and end bells ring in the sound you chose, even with the screen off.
 - **Screen stays on** while you sit with Focus open.
 - **Automatic backups** to `Download › Focus backups`.
