@@ -30,13 +30,17 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
+      - name: Compile
+        working-directory: android
+        run: gradle --no-daemon --console=plain compileReleaseJavaWithJavac 2>&1 | tee ../build.log; exit ${PIPESTATUS[0]}
+
       - name: Unpack the signing key
         env:
           FOCUS_KEYSTORE: ${{ secrets.FOCUS_KEYSTORE }}
           FOCUS_KEY_PASSWORD: ${{ secrets.FOCUS_KEY_PASSWORD }}
         run: |
           if [ -z "$FOCUS_KEYSTORE" ] || [ -z "$FOCUS_KEY_PASSWORD" ]; then
-            echo "::error::Add the FOCUS_KEYSTORE and FOCUS_KEY_PASSWORD secrets (Settings > Secrets and variables > Actions)." | tee build.log
+            echo "::error::Add the FOCUS_KEYSTORE and FOCUS_KEY_PASSWORD secrets (Settings > Secrets and variables > Actions)." | tee -a build.log
             exit 1
           fi
           echo "$FOCUS_KEYSTORE" | tr -d ' \r\n' | base64 -d > android/focus.keystore
@@ -46,7 +50,7 @@ jobs:
         env:
           FOCUS_BUILD: ${{ github.run_number }}
           FOCUS_KEY_PASSWORD: ${{ secrets.FOCUS_KEY_PASSWORD }}
-        run: gradle --no-daemon --console=plain assembleRelease 2>&1 | tee ../build.log; exit ${PIPESTATUS[0]}
+        run: gradle --no-daemon --console=plain assembleRelease 2>&1 | tee -a ../build.log; exit ${PIPESTATUS[0]}
 
       - name: Publish
         env:
