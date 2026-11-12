@@ -296,7 +296,7 @@ public class MainActivity extends Activity {
         });
 
         FrameLayout content = new FrameLayout(this);
-        View grip = new View(this) { // resize handle: two short diagonal lines in the bottom-right corner
+        View resize = new View(this) { // resize handle: two short diagonal lines in the bottom-right corner
             private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
             @Override
             protected void onDraw(Canvas c) {
@@ -308,8 +308,8 @@ public class MainActivity extends Activity {
                 c.drawLine(s - m, s * .72f, s * .72f, s - m, p);
             }
         };
-        grip.setContentDescription("Resize mini window");
-        grip.setOnTouchListener((v, e) -> {
+        resize.setContentDescription("Resize mini window");
+        resize.setOnTouchListener((v, e) -> {
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     dragX = e.getRawX() - lp.width;
@@ -330,7 +330,7 @@ public class MainActivity extends Activity {
         root.removeView(web);
         content.addView(web, new FrameLayout.LayoutParams(-1, -1));
         int gs = Math.round(26 * d);
-        content.addView(grip, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
+        content.addView(resize, new FrameLayout.LayoutParams(gs, gs, Gravity.END | Gravity.BOTTOM));
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
         try {
             wm.addView(box, lp);
