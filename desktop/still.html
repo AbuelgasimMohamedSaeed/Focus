@@ -1250,7 +1250,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   // ---- keep screen awake
   let lock = null;
   async function keepAwake() {
-    if (ANDROID || (window.stillNative && window.stillNative.ios)) { $('runWarn').hidden = true; return; } // the phone apps keep the screen on themselves
+    if (ANDROID) { $('runWarn').hidden = true; return; } // the Android app keeps the screen on itself
     try {
       if ('wakeLock' in navigator) { lock = await navigator.wakeLock.request('screen'); $('runWarn').hidden = true; return; }
     } catch (e) {}
@@ -2120,7 +2120,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     $('cv').hidden = true; document.body.classList.remove('compact'); fitCompact();
     setTimeout(() => { sizeRuler(); moveInd(); drawCharts(); checkAutoCompact(); }, 400);
   };
-  if ((ANDROID && !FocusAndroid.mini) || (window.stillNative && window.stillNative.ios) || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
+  if ((ANDROID && !FocusAndroid.mini) || (!window.stillNative && !('documentPictureInPicture' in window) && matchMedia('(pointer:coarse)').matches)) $('miniBtn').hidden = true;
   $('miniBtn').addEventListener('click', () => {
     if (window.stillNative) nativeMini(true);
     else if ('documentPictureInPicture' in window) openMini(true);
@@ -2698,7 +2698,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   syncSit();
   (async () => {
     if (!window.stillNative) return;
-    $('bkMsg').textContent = 'Backed up automatically to ' + (ANDROID ? 'Download' : window.stillNative.ios ? 'Files \u203a On My iPhone \u203a Focus' : 'Documents') + ' \u203a Focus backups (last 30 days kept).';
+    $('bkMsg').textContent = 'Backed up automatically to ' + (ANDROID ? 'Download' : 'Documents') + ' \u203a Focus backups (last 30 days kept).';
     const empty = S.sessions.length === 0 && !((S.dhikr && S.dhikr.log) || []).length;
     let found = null;
     if (empty) { try { found = await window.stillNative.findBackup(); } catch (e) {} }
