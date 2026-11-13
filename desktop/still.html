@@ -521,7 +521,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <button class="pill" id="bJoin" style="margin-top:14px">Join the leaderboard</button>
       </div>
       <div id="bMain" hidden>
-        <div class="seg small" id="bRange" role="group" aria-label="Range"><button data-v="today">Today</button><button data-v="week">This week</button></div>
+        <div class="seg small" id="bRange" role="group" aria-label="Range"><button data-v="today">Today</button><button data-v="week">This week</button><button data-v="month">This month</button></div>
         <ol class="b-list" id="bList"></ol>
         <p class="note" id="bState"></p>
         <div class="label">You</div>
@@ -1655,12 +1655,13 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   let deviceId = '';
   try { deviceId = localStorage.getItem('focus.device') || ''; if (!deviceId) { deviceId = rndCode(16); localStorage.setItem('focus.device', deviceId); } } catch (e) { deviceId = rndCode(16); }
   S.board = { name: (S.board && S.board.name) || '', on: !!(S.board && S.board.on) };
-  let bData = null, bAt = 0, bOk = 0, bErr = false, bRange = 'week', bBusy = false;
+  let bData = null, bAt = 0, bOk = 0, bErr = false, bRange = 'month', bBusy = false;
   const bUrl = path => BOARD_DB.replace(/\/$/, '') + '/board' + path + '.json';
   const bOn = () => !!(BOARD_DB && S.board.on && S.board.name);
   async function boardPush() {
     const today = dkey(Date.now()), days = {};
-    S.sessions.forEach(x => { const n = daysBetween(x.d, today); if (n >= 0 && n < 14) days[x.d] = (days[x.d] || 0) + x.min; });
+    const from = today.slice(0, 8) + '01' < addDays(today, -13) ? today.slice(0, 8) + '01' : addDays(today, -13); // this month, and enough for the week and streak
+    S.sessions.forEach(x => { if (x.d >= from && x.d <= today) days[x.d] = (days[x.d] || 0) + x.min; });
     const r = await fetch(bUrl('/' + deviceId), { method: 'PUT', body: JSON.stringify({ name: S.board.name, days, at: Date.now() }) });
     if (!r.ok) throw new Error('push ' + r.status);
   }
@@ -1688,7 +1689,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     return Object.keys(people).map(k => {
       const p = people[k];
       let min = 0, streak = 0, d = p.days[today] ? today : addDays(today, -1);
-      Object.keys(p.days).forEach(x => { if (bRange === 'today' ? x === today : x >= monday && x <= today) min += p.days[x]; });
+      const start = bRange === 'today' ? today : bRange === 'week' ? monday : today.slice(0, 8) + '01';
+      Object.keys(p.days).forEach(x => { if (x >= start && x <= today) min += p.days[x]; });
       while (p.days[d]) { streak++; d = addDays(d, -1); }
       return { name: p.name, min, streak, me: k === me };
     }).sort((a, b) => b.min - a.min || (b.me ? 1 : 0) - (a.me ? 1 : 0));
