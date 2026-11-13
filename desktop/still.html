@@ -1650,7 +1650,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
 
   // ---- leaderboard: everyone who uses Focus. Each device posts its daily focus minutes under a name to a small
   // Firebase database; devices with the same name count as one person
-  const BOARD_DB = '';
+  const BOARD_DB = 'https://focus-board-45ebd-default-rtdb.asia-southeast1.firebasedatabase.app';
   const rndCode = n => { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; return [...crypto.getRandomValues(new Uint8Array(n))].map(x => a[x % a.length]).join(''); };
   let deviceId = '';
   try { deviceId = localStorage.getItem('focus.device') || ''; if (!deviceId) { deviceId = rndCode(16); localStorage.setItem('focus.device', deviceId); } } catch (e) { deviceId = rndCode(16); }
