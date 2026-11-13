@@ -891,13 +891,13 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     $('goalLbl').textContent = fmtShort(S.goal);
     drawCharts(c);
     document.querySelectorAll('#goalSeg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.goal));
-    const recent = S.sessions.slice(-30).reverse();
+    const recent = S.sessions.filter(x => !x.hid).slice(-30).reverse(); // deleted sits leave the list but still count
     $('log').innerHTML = recent.length ? recent.map(s => {
       const d = new Date(s.start), [n, unit] = durParts(s.min);
       return '<li><span>' + d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' +
         d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) + (s.label ? ' · ' + dotHtml(s.label) + esc(s.label) : '') +
         '</span><span class="dz-r"><span>' + n + ' ' + unit + '</span><button class="del" data-start="' + s.start + '">Delete</button></span></li>';
-    }).join('') : '<li class="empty">No sits yet. Each one you finish shows up here.</li>';
+    }).join('') : '<li class="empty">' + (S.sessions.length ? 'History cleared. Your total time still counts every sit.' : 'No sits yet. Each one you finish shows up here.') + '</li>';
   }
 
   // ---- charts
@@ -1698,7 +1698,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   hold.addEventListener('contextmenu', e => e.preventDefault());
 
 
-  // ---- delete a sit from History (two taps, like Dhikr)
+  // ---- remove a sit from the History list (two taps, like Dhikr); its time still counts everywhere else
   let sitArm = null, sitT;
   $('log').addEventListener('click', e => {
     const b = e.target.closest('.del');
@@ -1712,8 +1712,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       return;
     }
     sitArm = null;
-    const i = S.sessions.findIndex(x => String(x.start) === st);
-    if (i >= 0) S.sessions.splice(i, 1);
+    const x = S.sessions.find(x => String(x.start) === st);
+    if (x) x.hid = true; // off the list only: totals, charts and the leaderboard keep the time
     save(); render();
   });
 
