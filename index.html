@@ -244,7 +244,6 @@ body.dz-hit .counter.done .of{color:var(--muted)}
 .prog-seg{margin:0 0 20px;padding-right:110px;justify-content:flex-start}
 #bRange{justify-content:flex-start}
 .b-in{width:100%;height:46px;border-radius:14px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 16px var(--sans);padding:0 14px}
-.b-join{display:flex;gap:8px;margin-top:8px}.b-join .b-in{flex:1;min-width:0;font-family:var(--mono);font-size:14px}
 .b-list{list-style:none;margin:14px 0 0;padding:0}
 .b-list li{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--card);margin-bottom:10px}
 .b-list li.me{border-color:var(--fg)}
@@ -613,25 +612,21 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     <div id="board" hidden>
       <div id="bSetup">
         <header class="hero"><div class="eyebrow">Leaderboard</div><div class="hero-num" style="font-size:34px">Who focuses more?</div></header>
-        <p class="note" style="text-align:left">Race a friend on focus time. Only your name and your daily focus minutes are shared, nothing else.
-          Use the same name on all your devices and they add up together.</p>
+        <p class="note" style="text-align:left">Everyone who uses Focus, ranked by focus time. Only your name and your daily focus minutes are shown, nothing else.
+          Type the same name on all your devices and they add up as one.</p>
         <div class="label">Your name</div>
         <input class="b-in" id="bName" maxlength="20" placeholder="For example Gasim" autocomplete="off">
-        <div class="label">Group</div>
-        <button class="pill" id="bStart">Start a new group</button>
-        <p class="note">or join with the code from your other device or your friend</p>
-        <div class="b-join"><input class="b-in" id="bCode" placeholder="Group code" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="mini" id="bJoin">Join</button></div>
+        <button class="pill" id="bJoin" style="margin-top:14px">Join the leaderboard</button>
       </div>
       <div id="bMain" hidden>
         <div class="seg small" id="bRange" role="group" aria-label="Range"><button data-v="today">Today</button><button data-v="week">This week</button></div>
         <ol class="b-list" id="bList"></ol>
         <p class="note" id="bState"></p>
-        <div class="label">This group</div>
+        <div class="label">You</div>
         <div class="set-row"><span>Your name<small>Same name on each of your devices</small></span>
           <input class="b-in" id="bName2" maxlength="20" style="width:150px;height:40px" autocomplete="off"></div>
-        <div class="set-row"><span>Group code<small id="bCodeShow" style="font-family:var(--mono)"></small></span><button class="mini" id="bCopy">Copy</button></div>
-        <p class="note" style="text-align:left">Type this code on your other devices and on your friend's phone to join. Anyone with the code can see this board, so only share it with them.</p>
-        <button class="mini" id="bLeave" style="margin-top:6px">Leave group</button>
+        <p class="note" style="text-align:left">Everyone using Focus can see this board. Same name = same person, so pick one nobody else uses.</p>
+        <button class="mini" id="bLeave" style="margin-top:6px">Leave the leaderboard</button>
       </div>
     </div>
     <div id="myProg">
@@ -1751,31 +1746,29 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   }
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
-  // ---- leaderboard: each device posts its daily focus minutes under a name to a small Firebase database,
-  // inside a group whose long random code is the only key (the database rules refuse anything without one)
+  // ---- leaderboard: everyone who uses Focus. Each device posts its daily focus minutes under a name to a small
+  // Firebase database; devices with the same name count as one person
   const BOARD_DB = '';
   const rndCode = n => { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; return [...crypto.getRandomValues(new Uint8Array(n))].map(x => a[x % a.length]).join(''); };
   let deviceId = '';
   try { deviceId = localStorage.getItem('focus.device') || ''; if (!deviceId) { deviceId = rndCode(16); localStorage.setItem('focus.device', deviceId); } } catch (e) { deviceId = rndCode(16); }
-  S.board = S.board || { name: '', group: '' };
+  S.board = { name: (S.board && S.board.name) || '', on: !!(S.board && S.board.on) };
   let bData = null, bAt = 0, bOk = 0, bErr = false, bRange = 'week', bBusy = false;
-  const fmtCode = c => (c.match(/.{1,4}/g) || []).join('-');
-  const cleanCode = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const bUrl = (g, path) => BOARD_DB.replace(/\/$/, '') + '/groups/' + g + path + '.json';
-  const bOn = () => !!(BOARD_DB && S.board.group && S.board.name);
+  const bUrl = path => BOARD_DB.replace(/\/$/, '') + '/board' + path + '.json';
+  const bOn = () => !!(BOARD_DB && S.board.on && S.board.name);
   async function boardPush() {
     const today = dkey(Date.now()), days = {};
     S.sessions.forEach(x => { const n = daysBetween(x.d, today); if (n >= 0 && n < 14) days[x.d] = (days[x.d] || 0) + x.min; });
-    const r = await fetch(bUrl(S.board.group, '/devices/' + deviceId), { method: 'PUT', body: JSON.stringify({ name: S.board.name, days, at: Date.now() }) });
+    const r = await fetch(bUrl('/' + deviceId), { method: 'PUT', body: JSON.stringify({ name: S.board.name, days, at: Date.now() }) });
     if (!r.ok) throw new Error('push ' + r.status);
   }
   async function boardSync(force) {
     if (!bOn() || bBusy) return;
-    if (!force && Date.now() - bAt < 60000) { paintBoard(); return; }
+    if (!force && Date.now() - bAt < 30000) { paintBoard(); return; }
     bBusy = true; bAt = Date.now();
     try {
       await boardPush();
-      const r = await fetch(bUrl(S.board.group, '/devices'));
+      const r = await fetch(bUrl(''));
       if (!r.ok) throw new Error('read ' + r.status);
       bData = (await r.json()) || {}; bErr = false; bOk = Date.now();
     } catch (e) { bErr = true; }
@@ -1803,7 +1796,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     $('bSetup').hidden = on; $('bMain').hidden = !on;
     if (!on) { if (document.activeElement !== $('bName')) $('bName').value = S.board.name || ''; return; }
     $('bRange').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === bRange));
-    const rows = bData ? boardRows() : [], max = Math.max(1, ...rows.map(r => r.min));
+    const rows = bData ? boardRows().slice(0, 100) : [], max = Math.max(1, ...rows.map(r => r.min));
     $('bList').innerHTML = rows.length ? rows.map((r, i) => '<li' + (r.me ? ' class="me"' : '') + '><span class="b-rank">' + (i + 1) + '</span>' +
       '<span class="at-mid"><span class="at-name">' + esc(r.name) + (r.me ? '<small>you</small>' : '') + '</span>' +
       '<span class="at-meta">' + (r.streak ? r.streak + (r.streak === 1 ? ' day' : ' days') + ' in a row' : 'no streak') + '</span>' +
@@ -1812,9 +1805,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       : '<li class="empty">' + (bErr ? 'Can\u2019t reach the board. Check your internet.' : 'Loading the board\u2026') + '</li>';
     const when = bOk ? new Date(bOk).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
     $('bState').textContent = bErr ? (bOk ? 'Offline \u00b7 last updated ' + when : '') :
-      rows.length === 1 ? 'Just you so far. Send the group code below to your friend.' : when ? 'Updated ' + when : '';
+      rows.length === 1 ? 'Just you so far. Tell your friend to join with his name.' : when ? 'Updated ' + when : '';
     if (document.activeElement !== $('bName2')) $('bName2').value = S.board.name;
-    $('bCodeShow').textContent = fmtCode(S.board.group);
   }
   function showProg(v) {
     $('board').hidden = v !== 'board'; $('myProg').hidden = v === 'board';
@@ -1828,37 +1820,20 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     if (!n) { toast('Type your name first'); return ''; }
     return n.slice(0, 20);
   }
-  $('bStart').addEventListener('click', () => {
+  $('bJoin').addEventListener('click', () => {
     if (!BOARD_DB) { toast('The leaderboard isn\u2019t connected yet'); return; }
     const n = bNameOk($('bName').value); if (!n) return;
-    S.board = { name: n, group: rndCode(24) }; save(); bData = null; paintBoard(); boardSync(true);
-  });
-  $('bJoin').addEventListener('click', async () => {
-    if (!BOARD_DB) { toast('The leaderboard isn\u2019t connected yet'); return; }
-    const n = bNameOk($('bName').value); if (!n) return;
-    const g = cleanCode($('bCode').value);
-    if (g.length !== 24) { toast('A group code has 24 letters and numbers'); return; }
-    try {
-      const r = await fetch(bUrl(g, '/devices'));
-      const d = r.ok ? await r.json() : null;
-      if (!d) { toast('No group with that code. Check it and try again.'); return; }
-    } catch (e) { toast('Can\u2019t reach the board. Check your internet.'); return; }
-    S.board = { name: n, group: g }; save(); $('bCode').value = ''; bData = null; paintBoard(); boardSync(true);
+    S.board = { name: n, on: true }; save(); bData = null; paintBoard(); boardSync(true);
   });
   $('bName2').addEventListener('change', () => {
     const n = bNameOk($('bName2').value); if (!n) { $('bName2').value = S.board.name; return; }
     S.board.name = n; save(); boardSync(true);
   });
-  $('bCopy').addEventListener('click', () => {
-    const t = fmtCode(S.board.group);
-    try { navigator.clipboard.writeText(t).then(() => toast('Code copied'), () => toast(t, 6000)); } catch (e) { toast(t, 6000); }
-  });
   let bLeaveArm = 0;
   $('bLeave').addEventListener('click', () => {
-    if (Date.now() - bLeaveArm > 3000) { bLeaveArm = Date.now(); $('bLeave').textContent = 'Tap again to leave'; setTimeout(() => { $('bLeave').textContent = 'Leave group'; }, 3000); return; }
-    const g = S.board.group;
-    try { fetch(bUrl(g, '/devices/' + deviceId), { method: 'DELETE' }).catch(() => {}); } catch (e) {}
-    S.board.group = ''; save(); bData = null; bErr = false; bOk = 0; $('bLeave').textContent = 'Leave group'; paintBoard();
+    if (Date.now() - bLeaveArm > 3000) { bLeaveArm = Date.now(); $('bLeave').textContent = 'Tap again to leave'; setTimeout(() => { $('bLeave').textContent = 'Leave the leaderboard'; }, 3000); return; }
+    try { fetch(bUrl('/' + deviceId), { method: 'DELETE' }).catch(() => {}); } catch (e) {}
+    S.board.on = false; save(); bData = null; bErr = false; bOk = 0; $('bLeave').textContent = 'Leave the leaderboard'; paintBoard();
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('board').hidden) boardSync(); });
 
