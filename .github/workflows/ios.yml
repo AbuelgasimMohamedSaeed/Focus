@@ -1,0 +1,32 @@
+name: iPhone app
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make the Xcode project
+        run: brew install xcodegen && cd ios && xcodegen generate
+      - name: Build (unsigned; Sideloadly signs it with your Apple ID when it installs)
+        run: |
+          cd ios
+          xcodebuild -project Focus.xcodeproj -target Focus -configuration Release -sdk iphoneos \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} MARKETING_VERSION=1.${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" SYMROOT=$PWD/build build 2>&1 | tail -40
+          test -d build/Release-iphoneos/Focus.app
+          mkdir -p Payload && cp -R build/Release-iphoneos/Focus.app Payload/
+          zip -qry Focus-iPhone.ipa Payload
+          ls -la Focus-iPhone.ipa
+      - name: Publish (never marked latest, so the Android updater keeps finding Focus.apk)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "iphone-v${{ github.run_number }}" ios/Focus-iPhone.ipa \
+            --title "Focus for iPhone ${{ github.run_number }}" --latest=false \
+            --notes "Install with Sideloadly from a Windows laptop (see README). Free Apple IDs: re-install every 7 days."
