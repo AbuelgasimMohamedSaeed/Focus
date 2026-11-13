@@ -30,6 +30,37 @@ const startStamp = codeStamp();
 const MINI_W = 340, MINI_H = 300;
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
+// Focus loads the online version, so the laptop updates itself like the phone (the page keeps working offline from its
+// own cache after the first visit). Only if it has never been reachable does it fall back to the copy inside this folder.
+const SITE = 'https://abuelgasimmohamedsaeed.github.io/Focus/';
+const MOVED = path.join(app.getPath('userData'), 'progress-moved-online.txt');
+async function loadApp() {
+  try {
+    await win.loadURL(SITE);
+  } catch (e) {
+    log('online version unreachable, using the copy on this laptop:', e.message);
+    if (win) win.loadFile(path.join(__dirname, 'still.html')).catch(() => {});
+    return;
+  }
+  if (fs.existsSync(MOVED)) return;
+  // the first time online: bring over the progress the offline copy kept on this laptop
+  try {
+    const reader = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, sandbox: true } });
+    await reader.loadFile(path.join(__dirname, 'blank.html'));
+    const old = await reader.webContents.executeJavaScript("localStorage.getItem('still.v1')");
+    reader.destroy();
+    if (old && win) {
+      const now = await win.webContents.executeJavaScript("localStorage.getItem('still.v1')");
+      const count = j => { try { const o = JSON.parse(j); return (o.sessions || []).length + ((o.dhikr && o.dhikr.log) || []).length; } catch (e) { return 0; } };
+      if (!now || count(now) < count(old)) {
+        log('moving this laptop\'s progress to the online version');
+        await win.webContents.executeJavaScript("localStorage.setItem('still.v1', " + JSON.stringify(old) + "); location.reload(); true");
+      }
+    }
+    fs.writeFileSync(MOVED, new Date().toISOString());
+  } catch (e) { log('moving progress failed', e); }
+}
+
 function createWindow() {
   nativeTheme.themeSource = 'dark';      // dark title bar to match the app
   Menu.setApplicationMenu(null);         // no File/Edit menu bar
@@ -47,7 +78,7 @@ function createWindow() {
   win.once('ready-to-show', () => { win.maximize(); win.show(); });
   win.webContents.on('preload-error', (_e, p, err) => log('preload error', p, err));
   win.webContents.on('console-message', (_e, level, msg) => { if (level >= 2) log('app says:', msg); });
-  win.loadFile(path.join(__dirname, 'still.html'));
+  loadApp();
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   // closing during a sit: shut the window down completely and keep only the tray + one timer (lightest on battery)
   win.on('close', e => {
