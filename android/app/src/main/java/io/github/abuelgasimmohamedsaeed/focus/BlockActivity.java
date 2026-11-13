@@ -27,7 +27,7 @@ import android.widget.TextView;
  */
 public class BlockActivity extends Activity {
     static final String EXTRA_PKG = "pkg", EXTRA_WHY = "why", EXTRA_VALUE = "value", EXTRA_LIMIT = "limit", EXTRA_PRAYER = "prayer";
-    static final String LIMIT = "limit", COOLDOWN = "cooldown", WINDOW = "window", BEDTIME = "bedtime", PRAYER = "prayer";
+    static final String LIMIT = "limit", COOLDOWN = "cooldown", WINDOW = "window", BEDTIME = "bedtime", PRAYER = "prayer", SITE = "site";
     private static final int BG = 0xFF09090B, FG = 0xFFECEAE4, MUTED = 0xFF8B8A86;
     private static final java.util.Map<String, String> ARABIC = new java.util.HashMap<>();
     static {
@@ -89,22 +89,38 @@ public class BlockActivity extends Activity {
         ilp.bottomMargin = dp(28);
         box.addView(icon, ilp);
 
+        if (L.ar(this)) box.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         if (COOLDOWN.equals(why)) {
             long min = Math.max(1, (value + 59999) / 60000);
-            add(text("Take a short break", 26, FG), 0);
-            add(text(name + " opens again in " + min + " min.", 16, MUTED), 12);
+            add(text(t("Take a short break", "خذ استراحة قصيرة"), 26, FG), 0);
+            add(text(t(name + " opens again in " + min + " min.", "يفتح " + name + " بعد " + min + " دقيقة."), 16, MUTED), 12);
         } else if (WINDOW.equals(why)) {
-            add(text(name + " is closed now", 26, FG), 0);
-            add(text("It opens " + at(value) + ".", 16, MUTED), 12);
+            add(text(t(name + " is closed now", name + " مغلق الآن"), 26, FG), 0);
+            add(text(t("It opens " + at(value) + ".", "يفتح " + at(value) + "."), 16, MUTED), 12);
         } else if (BEDTIME.equals(why)) {
-            add(text("Bedtime", 26, FG), 0);
-            add(text(name + " opens again " + at(value) + ". Sleep well.", 16, MUTED), 12);
+            add(text(t("Bedtime", "وقت النوم"), 26, FG), 0);
+            add(text(t(name + " opens again " + at(value) + ". Sleep well.", "يفتح " + name + " مجددًا " + at(value) + ". نومًا هنيئًا."), 16, MUTED), 12);
+        } else if (SITE.equals(why)) {
+            String site = i.getStringExtra(EXTRA_PRAYER);
+            add(text(t("This website is closed", "هذا الموقع مغلق"), 26, FG), 0);
+            add(text(t(site + " is closed in browsers. Use the app, where your limits apply.",
+                    site + " مغلق في المتصفحات. استخدم التطبيق حيث تنطبق حدودك."), 16, MUTED), 12);
+            add(button(t("Close it", "أغلقه"), true, v -> goHome()), 40);
+            setContentView(scroll);
+            getWindow().setDecorFitsSystemWindows(false);
+            return;
         } else if (PRAYER.equals(why)) {
             String prayer = i.getStringExtra(EXTRA_PRAYER);
-            add(text(ARABIC.containsKey(prayer) ? "\u062d\u0627\u0646 \u0648\u0642\u062a \u0635\u0644\u0627\u0629 " + ARABIC.get(prayer) : "", 20, MUTED), 0);
-            add(text("Time for " + (prayer == null ? "prayer" : prayer), 28, FG), 8);
-            add(text("The adhan has come. " + name + " will be here after you pray.", 16, MUTED), 12);
-            add(button("I understand", true, v -> {
+            String arTitle = ARABIC.containsKey(prayer) ? "\u062d\u0627\u0646 \u0648\u0642\u062a \u0635\u0644\u0627\u0629 " + ARABIC.get(prayer) : "";
+            if (L.ar(this)) {
+                add(text(arTitle, 28, FG), 0);
+                add(text("أذّن المؤذن. سيبقى " + name + " هنا بعد صلاتك.", 16, MUTED), 12);
+            } else {
+                add(text(arTitle, 20, MUTED), 0);
+                add(text("Time for " + (prayer == null ? "prayer" : prayer), 28, FG), 8);
+                add(text("The adhan has come. " + name + " will be here after you pray.", 16, MUTED), 12);
+            }
+            add(button(t("I understand", "فهمت"), true, v -> {
                 Rules.ackPrayer(this);
                 reopen();
             }), 40);
@@ -113,10 +129,11 @@ public class BlockActivity extends Activity {
             return;
         } else {
             long usedMin = Math.round(value / 60000.0);
-            add(text(name + " is done for today", 26, FG), 0);
-            add(text("You used " + usedMin + " min of your " + limit + " min. It opens again tomorrow.", 16, MUTED), 12);
+            add(text(t(name + " is done for today", "انتهى وقت " + name + " لليوم"), 26, FG), 0);
+            add(text(t("You used " + usedMin + " min of your " + limit + " min. It opens again tomorrow.",
+                    "استخدمت " + usedMin + " دقيقة من " + limit + " دقيقة. يفتح غدًا."), 16, MUTED), 12);
         }
-        add(button("Close it", true, v -> goHome()), 40);
+        add(button(t("Close it", "أغلقه"), true, v -> goHome()), 40);
 
         if (!COOLDOWN.equals(why)) {
             if (LIMIT.equals(why)) {
@@ -126,7 +143,8 @@ public class BlockActivity extends Activity {
             }
             int left = Rules.emergencyLeft(this);
             if (left > 0) {
-                add(link("Emergency: " + Rules.EMERGENCY_MIN + " minutes (" + left + " left this week)", v -> {
+                add(link(t("Emergency: " + Rules.EMERGENCY_MIN + " minutes (" + left + " left this week)",
+                        "طوارئ: " + Rules.EMERGENCY_MIN + " دقيقة (متبقٍ " + left + " هذا الأسبوع)"), v -> {
                     Rules.useEmergency(this, pkg);
                     reopen();
                 }), 18);
@@ -139,7 +157,7 @@ public class BlockActivity extends Activity {
 
     /** 5 more minutes, after waiting 30 seconds. */
     private void addWait() {
-        TextView b = button("5 more minutes", false, null);
+        TextView b = button(t("5 more minutes", "5 دقائق إضافية"), false, null);
         add(b, 12);
         b.setOnClickListener(v -> {
             b.setEnabled(false);
@@ -148,10 +166,11 @@ public class BlockActivity extends Activity {
                 @Override
                 public void run() {
                     if (s[0] > 0) {
-                        b.setText("Wait " + s[0]-- + " s");
+                        b.setText(t("Wait " + s[0] + " s", "انتظر " + s[0] + " ث"));
+                        s[0]--;
                         main.postDelayed(this, 1000);
                     } else {
-                        b.setText("Unlock 5 minutes");
+                        b.setText(t("Unlock 5 minutes", "افتح 5 دقائق"));
                         b.setEnabled(true);
                         b.setOnClickListener(x -> unlock());
                     }
@@ -163,15 +182,16 @@ public class BlockActivity extends Activity {
 
     /** 5 more minutes, after typing a sentence exactly. */
     private void addType(String name) {
-        String sentence = "I choose to spend 5 more minutes on " + name + " instead of my goals.";
-        TextView b = button("5 more minutes", false, null);
+        String sentence = t("I choose to spend 5 more minutes on " + name + " instead of my goals.",
+                "أختار أن أقضي 5 دقائق إضافية على " + name + " بدلًا من أهدافي.");
+        TextView b = button(t("5 more minutes", "5 دقائق إضافية"), false, null);
         add(b, 12);
         b.setOnClickListener(v -> {
             b.setVisibility(View.GONE);
-            add(text("Type this to unlock 5 minutes:\n“" + sentence + "”", 14, MUTED), 18);
+            add(text(t("Type this to unlock 5 minutes:", "اكتب هذا لفتح 5 دقائق:") + "\n“" + sentence + "”", 14, MUTED), 18);
             EditText in = field(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
             add(in, 10);
-            TextView go = button("Unlock 5 minutes", false, x -> unlock());
+            TextView go = button(t("Unlock 5 minutes", "افتح 5 دقائق"), false, x -> unlock());
             go.setEnabled(false);
             go.setAlpha(.4f);
             add(go, 10);
@@ -188,12 +208,19 @@ public class BlockActivity extends Activity {
         });
     }
 
-    /** "at 6:00 PM", or "tomorrow at 6:00 AM". */
-    private static String at(long when) {
+    /** "at 6:00 PM", or "tomorrow at 6:00 AM" (in Arabic: "الساعة 6:00 م"). */
+    private String at(long when) {
         java.util.Calendar a = java.util.Calendar.getInstance(), b = java.util.Calendar.getInstance();
         b.setTimeInMillis(when);
-        String t = new java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(new java.util.Date(when));
-        return (a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR) ? "at " : "tomorrow at ") + t;
+        boolean same = a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR);
+        String clock = new java.text.SimpleDateFormat("h:mm", java.util.Locale.US).format(new java.util.Date(when));
+        boolean am = b.get(java.util.Calendar.HOUR_OF_DAY) < 12;
+        if (L.ar(this)) return (same ? "" : "غدًا ") + "الساعة " + clock + (am ? " ص" : " م");
+        return (same ? "at " : "tomorrow at ") + clock + (am ? " AM" : " PM");
+    }
+
+    private String t(String en, String ar) {
+        return L.t(this, en, ar);
     }
 
     private void unlock() {

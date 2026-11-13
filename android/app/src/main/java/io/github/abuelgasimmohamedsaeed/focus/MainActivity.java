@@ -246,21 +246,27 @@ public class MainActivity extends Activity {
     void askLine() {
         if (isFinishing() || isDestroyed()) return;
         new AlertDialog.Builder(this)
-                .setTitle("Turn on Accessibility for Focus")
-                .setMessage("Focus uses it for two things: the line along the very top of the screen that shows your time left, "
-                        + "and App Time's block screen when an app's daily time is up.\n\n"
+                .setTitle(L.t(this, "Turn on Accessibility for Focus", "شغّل إمكانية الوصول لـ Focus"))
+                .setMessage(L.t(this, "Focus uses it for the line along the very top of the screen that shows your time left, "
+                        + "App Time's block screen, and, if you turn it on, closing blocked websites in your browser.\n\n"
                         + "1. Tap Open settings.\n"
                         + "2. Find Focus (on Xiaomi: under Downloaded apps) and turn it on.\n\n"
                         + "If Android says it is a restricted setting: open Focus's App info, tap \u22ee at the top right, "
                         + "choose Allow restricted settings, and try again.\n\n"
-                        + "Focus only sees which app is open, never what is on the screen.")
-                .setPositiveButton("Open settings", (d, w) -> {
+                        + "Focus only sees which app is open, plus the browser's address bar when website blocking is on.",
+                        "يستخدمها Focus للخط أعلى الشاشة الذي يُظهر الوقت المتبقي، ولشاشة الحظر في وقت التطبيقات، ولإغلاق المواقع المحظورة في المتصفح إن شغّلت ذلك.\n\n"
+                        + "1. اضغط فتح الإعدادات.\n"
+                        + "2. ابحث عن Focus (في شاومي: ضمن التطبيقات المنزّلة) وشغّله.\n\n"
+                        + "إذا قال أندرويد إنه إعداد مقيّد: افتح معلومات تطبيق Focus، اضغط \u22ee في الأعلى، "
+                        + "اختر السماح بالإعدادات المقيدة، ثم حاول مجددًا.\n\n"
+                        + "يرى Focus فقط التطبيق المفتوح، وشريط عنوان المتصفح عند تشغيل حظر المواقع."))
+                .setPositiveButton(L.t(this, "Open settings", "فتح الإعدادات"), (d, w) -> {
                     try {
                         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                     } catch (Exception ignored) {
                     }
                 })
-                .setNegativeButton("Not now", null)
+                .setNegativeButton(L.t(this, "Not now", "ليس الآن"), null)
                 .show();
     }
 

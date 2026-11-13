@@ -151,16 +151,16 @@ final class Engine {
         int col = color(s.color);
         if (col != 0) b.setColor(col);
         if (s.over) {
-            b.setContentTitle(name + " · time's up")
-                    .setContentText("Extra time counts every 5 min · open Focus and tap Done")
+            b.setContentTitle(name + L.t(c, " · time's up", " · انتهى الوقت"))
+                    .setContentText(L.t(c, "Extra time counts every 5 min · open Focus and tap Done", "الوقت الإضافي يُحسب · افتح Focus واضغط تم"))
                     .setWhen(s.endAt); // counts up from the end
         } else if (s.up) {
             b.setContentTitle(name)
-                    .setContentText("Counting up to " + duration(s.planned) + " · ends at " + clock(s.endAt))
+                    .setContentText(L.t(c, "Counting up to ", "العدّ حتى ") + duration(s.planned) + L.t(c, " · ends at ", " · ينتهي ") + clock(s.endAt))
                     .setWhen(s.startAt);
         } else {
             b.setContentTitle(name)
-                    .setContentText(duration(s.planned) + " · ends at " + clock(s.endAt))
+                    .setContentText(duration(s.planned) + L.t(c, " · ends at ", " · ينتهي ") + clock(s.endAt))
                     .setWhen(s.endAt)
                     .setChronometerCountDown(true);
         }
@@ -172,11 +172,11 @@ final class Engine {
 
     /** The "time's up" alert. */
     static Notification alert(Context c, Sit s) {
-        String name = s.label.isEmpty() ? "Your sit" : s.label;
+        String name = s.label.isEmpty() ? L.t(c, "Your sit", "جلستك") : s.label;
         Notification.Builder b = new Notification.Builder(c, CH_ALERT)
                 .setSmallIcon(R.drawable.ic_stat_focus)
-                .setContentTitle("Time's up")
-                .setContentText(name + " · " + duration(s.planned) + " done. Extra time counts until you tap Done.")
+                .setContentTitle(L.t(c, "Time's up", "انتهى الوقت"))
+                .setContentText(name + " · " + duration(s.planned) + L.t(c, " done. Extra time counts until you tap Done.", " اكتملت. الوقت الإضافي يُحسب حتى تضغط تم."))
                 .setCategory(Notification.CATEGORY_REMINDER)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Focus</string>
-    <string name="accessibility_desc">Lets Focus draw the line at the very top of your screen that shows the time left while you sit, and show App Time\'s block screen when an app\'s daily time is up. Focus only sees which app is open, never what is on your screen.</string>
+    <string name="accessibility_desc">Lets Focus draw the line at the very top of your screen that shows the time left while you sit, show App Time\'s block screen when an app\'s time is up, and, if you turn on website blocking, read the address bar of your browser to close the sites you blocked. Focus never reads or keeps anything else on your screen.</string>
+    <string name="widget_desc">Time left today on the apps you limit</string>
 </resources>

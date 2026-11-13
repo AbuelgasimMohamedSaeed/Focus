@@ -97,6 +97,7 @@ final class Bridge {
     public void setAppRules(String json) {
         Rules.save(app, json);
         FocusAccessibility.rulesChanged();
+        AppTimeWidget.refreshNow(app);
     }
 
     /** {name, gps, allowed, times: [five adhan times in minutes after midnight]} for the App Time page. */
@@ -123,6 +124,12 @@ final class Bridge {
     @JavascriptInterface
     public String appHistory(int n) {
         return AppUsage.history(app, Math.max(1, Math.min(n, 30)));
+    }
+
+    /** Can Focus turn the screen gray (the one-time setup from a computer was done)? */
+    @JavascriptInterface
+    public boolean grayAllowed() {
+        return Gray.allowed(app);
     }
 
     /** "en" or "ar": the language Android's own screens (block screen, notifications, widget) should use. */

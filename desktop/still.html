@@ -641,7 +641,30 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         <div class="set-row"><span>Bedtime<small>Watched apps stay closed overnight</small></span>
           <button class="switch" id="bedSw" role="switch" aria-checked="false" aria-label="Bedtime"></button></div>
         <div class="win-row" id="bedTimes"><input type="time" id="bedFrom" aria-label="Bedtime starts"><span>to</span><input type="time" id="bedTo" aria-label="Bedtime ends"></div>
+        <div class="label">Websites</div>
+        <p class="note" style="text-align:left;margin:-4px 0 4px">Closed in every browser, so the app (with its limits) is the only way in.</p>
+        <div class="set-row"><span>Facebook<small>facebook.com, m.facebook.com, fb.com</small></span>
+          <button class="switch" data-site="facebook.com" role="switch" aria-checked="false" aria-label="Block Facebook website"></button></div>
+        <div class="set-row"><span>Instagram<small>instagram.com</small></span>
+          <button class="switch" data-site="instagram.com" role="switch" aria-checked="false" aria-label="Block Instagram website"></button></div>
+        <div class="set-row"><span>TikTok<small>tiktok.com</small></span>
+          <button class="switch" data-site="tiktok.com" role="switch" aria-checked="false" aria-label="Block TikTok website"></button></div>
       </div>
+      <div class="label">Gray screen</div>
+      <div class="at-perm" id="grSetup" hidden>
+        <b>One-time setup from your laptop</b>
+        <ol>
+          <li>On the phone: <b>Settings → About phone</b>, tap <b>OS version</b> 7 times. Then in <b>Additional settings → Developer options</b> turn on <b>USB debugging</b> and <b>USB debugging (Security settings)</b>.</li>
+          <li>Plug the phone into the laptop and allow it when the phone asks.</li>
+          <li>On the laptop, double-click <b>Gray screen setup</b> in the Focus folder on your Desktop.</li>
+        </ol>
+        <p class="note" style="margin:0">Android only lets a computer give this permission. You can turn USB debugging off again afterwards.</p>
+      </div>
+      <div class="set-row"><span>At bedtime<small>The whole phone turns black and white</small></span>
+        <button class="switch" id="grBed" role="switch" aria-checked="false" aria-label="Gray screen at bedtime"></button></div>
+      <div class="win-row" id="grBedTimes"><input type="time" id="grFrom" aria-label="Gray starts"><span>to</span><input type="time" id="grTo" aria-label="Gray ends"></div>
+      <div class="set-row"><span>After half a limit<small>Gray while you're in an app that has used half its time today</small></span>
+        <button class="switch" id="grHalf" role="switch" aria-checked="false" aria-label="Gray screen after half a limit"></button></div>
       <div class="label">Reports</div>
       <div class="set-row"><span>Nightly summary<small>One quiet notification: today's time, limits kept, time saved</small></span>
         <button class="switch" id="ntSw" role="switch" aria-checked="false" aria-label="Nightly summary"></button></div>
@@ -2121,6 +2144,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
   AT.limitsAt = AT.limitsAt || {};   // package -> when its limit was last set (shrinking starts from then)
   if (AT.shrink && !AT.shrink.pct) AT.shrink = null;
   if (AT.nightly === undefined) AT.nightly = 22 * 60; // the nightly summary is on at 10 PM unless you turn it off
+  AT.sites = AT.sites || [];         // websites closed in browsers
+  AT.gray = AT.gray || { bed: false, from: 23 * 60, to: 6 * 60, half: false };
   const DAYMS = 864e5;
   // the limit after any weekly shrinking; Android works it out the same way
   function effLimit(pkg, now) {
@@ -2140,7 +2165,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
         friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0,
         watched: AT.watched, windows: cleanWins(), bedtime: AT.bedtime.on ? { from: AT.bedtime.from, to: AT.bedtime.to } : null,
         prayer: AT.prayer.on ? { adjust: AT.prayer.adjust } : null,
-        shrink: AT.shrink, limitsAt: AT.limitsAt, nightly: AT.nightly == null ? -1 : AT.nightly, base: AT.base }));
+        shrink: AT.shrink, limitsAt: AT.limitsAt, nightly: AT.nightly == null ? -1 : AT.nightly, base: AT.base,
+        sites: AT.sites.length ? AT.sites : null,
+        gray: AT.gray.bed || AT.gray.half ? { bed: AT.gray.bed ? { from: AT.gray.from, to: AT.gray.to } : null, half: !!AT.gray.half } : null }));
     } catch (e) {}
   }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
@@ -2197,7 +2224,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       : '<li class="empty">No apps watched yet. Tap <b>Watch</b> next to an app below, or add one.</li>';
     $('atOthers').innerHTML = others.length ? others.map(a => atRow(a, max, 'watch')).join('') : '<li class="empty">Nothing else used today.</li>';
     atFillIcons($('atBody'));
-    const anyLimit = (!AT.trackOnly && (AT.watched.some(p => AT.limits[p] || (AT.windows[p] || []).length) || AT.bedtime.on)) || AT.prayer.on;
+    const anyLimit = (!AT.trackOnly && (AT.watched.some(p => AT.limits[p] || (AT.windows[p] || []).length) || AT.bedtime.on || AT.sites.length)) || AT.prayer.on || AT.gray.bed || AT.gray.half;
     let acc = true;
     try { acc = !FocusAndroid.lineReady || FocusAndroid.lineReady(); } catch (e) {}
     $('atNeedAcc').hidden = !anyLimit || acc;
@@ -2303,6 +2330,12 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
     $('atShrink').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === pct));
     $('ntSw').setAttribute('aria-checked', String(AT.nightly != null && AT.nightly >= 0)); $('ntRow').hidden = !(AT.nightly >= 0);
     if (AT.nightly >= 0) $('ntAt').value = toHM(AT.nightly);
+    document.querySelectorAll('[data-site]').forEach(b => b.setAttribute('aria-checked', String(AT.sites.includes(b.dataset.site))));
+    let grOk = false;
+    try { grOk = FocusAndroid.grayAllowed(); } catch (e) {}
+    $('grSetup').hidden = grOk || !(AT.gray.bed || AT.gray.half);
+    $('grBed').setAttribute('aria-checked', String(!!AT.gray.bed)); $('grHalf').setAttribute('aria-checked', String(!!AT.gray.half));
+    $('grBedTimes').hidden = !AT.gray.bed; $('grFrom').value = toHM(AT.gray.from); $('grTo').value = toHM(AT.gray.to);
     paintPrayer();
   }
   function paintPrayer() {
@@ -2444,6 +2477,16 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done,body.com
       AT.shrink = pct ? { pct, since: AT.shrink && AT.shrink.pct ? AT.shrink.since : Date.now() } : null;
       save(); pushRules(); paintAppTime();
     });
+    document.querySelectorAll('[data-site]').forEach(b => b.addEventListener('click', () => {
+      const d = b.dataset.site, i = AT.sites.indexOf(d);
+      if (i >= 0) AT.sites.splice(i, 1); else AT.sites.push(d);
+      save(); pushRules(); paintAppTime();
+    }));
+    $('grBed').addEventListener('click', () => { AT.gray.bed = !AT.gray.bed; save(); pushRules(); paintAppTime(); });
+    $('grHalf').addEventListener('click', () => { AT.gray.half = !AT.gray.half; save(); pushRules(); paintAppTime(); });
+    ['grFrom', 'grTo'].forEach(id => $(id).addEventListener('change', () => {
+      AT.gray[id === 'grFrom' ? 'from' : 'to'] = fromHM($(id).value); save(); pushRules();
+    }));
     $('ntSw').addEventListener('click', () => { AT.nightly = AT.nightly >= 0 ? -1 : 22 * 60; save(); pushRules(); paintRules(); });
     $('ntAt').addEventListener('change', () => { if ($('ntAt').value) { AT.nightly = fromHM($('ntAt').value); save(); pushRules(); } });
     $('atLimitDone').addEventListener('click', () => { $('atLimitSheet').hidden = true; paintAppTime(); });

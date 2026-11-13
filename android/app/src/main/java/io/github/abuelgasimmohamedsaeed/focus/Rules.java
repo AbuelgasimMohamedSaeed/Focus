@@ -24,6 +24,8 @@ import java.util.Locale;
  *   limitsAt   {package: when its limit was last set}, so a new limit starts shrinking from then
  *   nightly    minutes after midnight for the nightly summary, or -1
  *   base       {package: daily milliseconds before you watched it}, for "time saved"
+ *   sites      ["instagram.com", ...] or null: websites closed in browsers
+ *   gray       {bed: {from, to} or null, half: true/false} or null: when the phone turns black and white
  *   watched    the apps on the watch list: bedtime and prayer times close these
  *   windows    {package: [{from, to}]} minutes after midnight: the app opens only in these hours
  *   bedtime    {from, to} or null: watched apps closed in these hours
@@ -102,7 +104,17 @@ final class Rules {
                 || b.optInt("delay", 0) < a.optInt("delay", 0)
                 || changed(a.optJSONObject("bedtime"), b.optJSONObject("bedtime"))
                 || (a.optJSONObject("prayer") != null && b.optJSONObject("prayer") == null) // reminder turned off
-                || windowsLooser(a, b) || unwatched(a, b);
+                || windowsLooser(a, b) || unwatched(a, b)
+                || sitesLooser(a, b);
+    }
+
+    /** A website that was closed in browsers isn't any more. */
+    private static boolean sitesLooser(JSONObject a, JSONObject b) {
+        JSONArray sa = a.optJSONArray("sites"), sb = b.optJSONArray("sites");
+        if (sa == null) return false;
+        String after = sb == null ? "" : sb.toString();
+        for (int i = 0; i < sa.length(); i++) if (!after.contains("\"" + sa.optString(i) + "\"")) return true;
+        return false;
     }
 
     /** A schedule that was on was turned off or changed. */
@@ -366,6 +378,33 @@ final class Rules {
         JSONObject b = r.optJSONObject("bedtime");
         if (b != null) next = Math.min(next, ahead(t, b.optInt("from") * 60000L));
         return next;
+    }
+
+    /** Websites to close in browsers, or null. */
+    static JSONArray sites(Context c) {
+        JSONArray a = get(c).optJSONArray("sites");
+        return a == null || a.length() == 0 ? null : a;
+    }
+
+    static boolean grayHalf(Context c) {
+        JSONObject g = get(c).optJSONObject("gray");
+        return g != null && g.optBoolean("half");
+    }
+
+    /** Is it inside the gray-screen bedtime hours right now? */
+    static boolean grayBedtime(Context c, long now) {
+        JSONObject g = get(c).optJSONObject("gray"), b = g == null ? null : g.optJSONObject("bed");
+        if (b == null) return false;
+        return inside(msOfDay(now), b.optInt("from") * 60000L, b.optInt("to") * 60000L);
+    }
+
+    /** Milliseconds until the gray-screen bedtime starts or ends, or 0 when there is none. */
+    static long nextGrayEdge(Context c, long now) {
+        JSONObject g = get(c).optJSONObject("gray"), b = g == null ? null : g.optJSONObject("bed");
+        if (b == null || !Gray.allowed(c)) return 0;
+        long t = msOfDay(now), a = ahead(t, b.optInt("from") * 60000L), z = ahead(t, b.optInt("to") * 60000L);
+        long n = Math.min(a == 0 ? DAY : a, z == 0 ? DAY : z);
+        return n;
     }
 
     /** For the page: {pendingAt, emergencyLeft}. */

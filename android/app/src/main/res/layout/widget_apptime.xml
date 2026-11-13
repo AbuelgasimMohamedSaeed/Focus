@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/w_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#8B8A86"
+        android:textSize="12sp"
+        android:text="App Time" />
+
+    <TextView
+        android:id="@+id/w_big"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFamily="monospace"
+        android:textColor="#ECEAE4"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:text="—" />
+
+    <TextView
+        android:id="@+id/w_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="#ECEAE4"
+        android:textSize="13sp"
+        android:maxLines="3"
+        android:ellipsize="end" />
+</LinearLayout>
