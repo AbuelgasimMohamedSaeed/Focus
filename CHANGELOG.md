@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-13: App Time stages 5 to 8, Arabic
+- This week on App Time: time saved against your usual use, days in a row inside your limits, a bar per day (red on days you went over a limit), and this week against last week.
+- Shrink limits every week (5, 10 or 20%, never below 10 minutes).
+- Nightly summary: one quiet notification at 10 PM (you can change the time or turn it off).
+- Home screen widget: time left on the apps you limit.
+- Websites: Facebook, Instagram and TikTok can be closed in every browser.
+- Gray screen at bedtime and after half an app's limit (needs a one-time setup from a computer: "Gray screen setup" in the Focus folder).
+- Arabic: Settings > Language. The whole app, the block screens, notifications and the widget, right to left.
+
 ## Web 1.5.0 (2026-11-13): Leaderboard
 - Progress has a switch at the top: My progress or Leaderboard.
 - One board for everyone who uses Focus. Join by typing your name; the same name on several devices adds up as one person.
