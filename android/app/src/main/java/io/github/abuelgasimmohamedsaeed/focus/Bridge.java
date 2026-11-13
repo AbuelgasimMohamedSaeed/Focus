@@ -119,6 +119,18 @@ final class Bridge {
         activity.runOnUiThread(activity::askLocation);
     }
 
+    /** App use per day for the last n days (today included), for the weekly report and streaks. */
+    @JavascriptInterface
+    public String appHistory(int n) {
+        return AppUsage.history(app, Math.max(1, Math.min(n, 30)));
+    }
+
+    /** "en" or "ar": the language Android's own screens (block screen, notifications, widget) should use. */
+    @JavascriptInterface
+    public void setLanguage(String lang) {
+        L.set(app, lang);
+    }
+
     /** {pendingAt, emergencyLeft} for the App Time page. */
     @JavascriptInterface
     public String rulesStatus() {

@@ -11,6 +11,7 @@ public class BootReceiver extends BroadcastReceiver {
         String a = i.getAction();
         if (!Intent.ACTION_BOOT_COMPLETED.equals(a) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) return;
         Engine.channels(c);
+        Nightly.schedule(c);
         Sit s = Sit.load(c);
         if (s == null) return;
         Engine.refresh(c, s);

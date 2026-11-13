@@ -57,6 +57,7 @@
             android:theme="@style/Focus" />
 
         <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <receiver android:name=".Nightly" android:exported="false" />
         <receiver android:name=".InstallReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>

@@ -127,6 +127,81 @@ final class AppUsage {
         return use;
     }
 
+    /**
+     * The last n days, today included: [{d: "2026-11-13", apps: {package: milliseconds}}], oldest first.
+     * Android keeps about a week or so of these records; older days come back empty.
+     */
+    static String history(Context c, int n) {
+        JSONArray out = new JSONArray();
+        if (!allowed(c) || n < 1) return out.toString();
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        cal.add(Calendar.DAY_OF_YEAR, -(n - 1));
+        long[] bounds = new long[n + 1];
+        String[] keys = new String[n];
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+        for (int i = 0; i <= n; i++) {
+            bounds[i] = cal.getTimeInMillis();
+            if (i < n) keys[i] = f.format(new java.util.Date(bounds[i]));
+            cal.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Long>[] per = new Map[n];
+        for (int i = 0; i < n; i++) per[i] = new HashMap<>();
+        long now = System.currentTimeMillis();
+        UsageEvents events = c.getSystemService(UsageStatsManager.class).queryEvents(bounds[0] - 3 * 3600_000L, now);
+        UsageEvents.Event e = new UsageEvents.Event();
+        String current = null;
+        long since = 0;
+        while (events.hasNextEvent()) {
+            events.getNextEvent(e);
+            String p = e.getPackageName();
+            long t = e.getTimeStamp();
+            switch (e.getEventType()) {
+                case UsageEvents.Event.ACTIVITY_RESUMED:
+                    if (current != null && !current.equals(p)) split(per, bounds, current, since, t);
+                    if (!p.equals(current)) since = t;
+                    current = p;
+                    break;
+                case UsageEvents.Event.ACTIVITY_PAUSED:
+                case UsageEvents.Event.ACTIVITY_STOPPED:
+                    if (p.equals(current)) {
+                        split(per, bounds, current, since, t);
+                        current = null;
+                    }
+                    break;
+                case UsageEvents.Event.SCREEN_NON_INTERACTIVE:
+                    if (current != null) split(per, bounds, current, since, t);
+                    current = null;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (current != null) split(per, bounds, current, since, now);
+        Map<String, String> apps = apps(c);
+        for (int i = 0; i < n; i++) {
+            JSONObject a = new JSONObject();
+            for (Map.Entry<String, Long> r : per[i].entrySet()) {
+                if (r.getValue() < 30_000 || !apps.containsKey(r.getKey()) || r.getKey().equals(c.getPackageName())) continue;
+                try { a.put(r.getKey(), (long) r.getValue()); } catch (Exception ignored) {}
+            }
+            try { out.put(new JSONObject().put("d", keys[i]).put("apps", a)); } catch (Exception ignored) {}
+        }
+        return out.toString();
+    }
+
+    /** Add [from, to) to each day it falls in. */
+    private static void split(Map<String, Long>[] per, long[] bounds, String pkg, long from, long to) {
+        for (int i = 0; i < per.length; i++) {
+            long lo = Math.max(from, bounds[i]), hi = Math.min(to, bounds[i + 1]);
+            if (hi > lo) per[i].put(pkg, per[i].getOrDefault(pkg, 0L) + (hi - lo));
+        }
+    }
+
     private static Map<String, String> appsCache;
     private static long appsAt;
 

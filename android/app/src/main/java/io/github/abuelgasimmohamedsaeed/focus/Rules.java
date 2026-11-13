@@ -20,6 +20,10 @@ import java.util.Locale;
  *   emergency  emergency unlocks allowed per 7 days (15 minutes each, no friction)
  *   cooldown   minutes an app stays closed after you leave it
  *   delay      minutes before a change that loosens the rules takes effect
+ *   shrink     {pct, since} or null: every 7 days each limit drops by pct (never below 10 minutes)
+ *   limitsAt   {package: when its limit was last set}, so a new limit starts shrinking from then
+ *   nightly    minutes after midnight for the nightly summary, or -1
+ *   base       {package: daily milliseconds before you watched it}, for "time saved"
  *   watched    the apps on the watch list: bedtime and prayer times close these
  *   windows    {package: [{from, to}]} minutes after midnight: the app opens only in these hours
  *   bedtime    {from, to} or null: watched apps closed in these hours
@@ -74,6 +78,7 @@ final class Rules {
             current = next;
             prefs(c).edit().putString("appRules", next.toString()).remove("pendingRules").remove("pendingAt").apply();
         }
+        Nightly.schedule(c);
     }
 
     private static int frictionLevel(String f) {
@@ -82,11 +87,12 @@ final class Rules {
 
     static boolean looser(JSONObject a, JSONObject b) {
         if (b.optBoolean("track") && !a.optBoolean("track")) return true;
-        JSONObject la = a.optJSONObject("limits"), lb = b.optJSONObject("limits");
+        JSONObject la = a.optJSONObject("limits");
+        long now = System.currentTimeMillis();
         if (la != null) {
             for (Iterator<String> it = la.keys(); it.hasNext(); ) {
                 String k = it.next();
-                int before = la.optInt(k, 0), after = lb == null ? 0 : lb.optInt(k, 0);
+                int before = effLimit(a, k, now), after = effLimit(b, k, now);
                 if (before > 0 && (after == 0 || after > before)) return true;
             }
         }
@@ -143,14 +149,25 @@ final class Rules {
 
     /** The daily limit in minutes for today, including unlocked extra time; 0 = no limit. */
     static int limit(Context c, String pkg) {
-        JSONObject limits = get(c).optJSONObject("limits");
-        int base = limits == null ? 0 : Math.max(0, limits.optInt(pkg, 0));
+        int base = baseLimit(c, pkg);
         return base == 0 ? 0 : base + extraToday(c, pkg);
     }
 
     static int baseLimit(Context c, String pkg) {
-        JSONObject limits = get(c).optJSONObject("limits");
-        return limits == null ? 0 : Math.max(0, limits.optInt(pkg, 0));
+        return effLimit(get(c), pkg, System.currentTimeMillis());
+    }
+
+    /** The limit you set, after any weekly shrinking (the page works this out the same way). */
+    static int effLimit(JSONObject r, String pkg, long now) {
+        JSONObject limits = r.optJSONObject("limits");
+        int base = limits == null ? 0 : Math.max(0, limits.optInt(pkg, 0));
+        JSONObject s = r.optJSONObject("shrink");
+        if (base == 0 || s == null || s.optInt("pct", 0) <= 0) return base;
+        JSONObject at = r.optJSONObject("limitsAt");
+        long since = Math.max(s.optLong("since", now), at == null ? 0 : at.optLong(pkg, 0));
+        long weeks = Math.max(0, (now - since) / (7 * DAY));
+        long v = Math.round(base * Math.pow(1 - s.optInt("pct") / 100.0, weeks));
+        return (int) Math.max(Math.min(base, 10), v);
     }
 
     private static String today() {

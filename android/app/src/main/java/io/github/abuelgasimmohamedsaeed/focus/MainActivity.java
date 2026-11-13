@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(this), "FocusAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
-        web.loadUrl(URL);
+        web.loadUrl(URL + ("apptime".equals(getIntent().getStringExtra("tab")) ? "#apptime" : ""));
         loadedAt = System.currentTimeMillis();
 
         if (Build.VERSION.SDK_INT >= 33
@@ -116,6 +116,15 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         keepScreenOn(Sit.load(this) != null);
+    }
+
+    /** Opened again from a notification or the widget that points at a page (App Time). */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String tab = intent.getStringExtra("tab");
+        if (web != null && "apptime".equals(tab)) web.evaluateJavascript("window.focusOpenTab && focusOpenTab('apptime')", null);
     }
 
     private static final int ASK_LOCATION = 7;

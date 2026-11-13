@@ -233,6 +233,18 @@ body.dz-hit .counter.done .of{color:var(--muted)}
 /* App Time */
 .at-perm{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:18px;margin-top:22px;display:flex;flex-direction:column;gap:10px}
 .at-perm b{font-size:16px}
+.at-week{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:18px;margin-top:18px}
+.aw-top{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.aw-top b{display:block;font:600 24px var(--mono);letter-spacing:-.03em}
+.aw-top small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
+.aw-bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:92px;margin-top:18px}
+.aw-bars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.aw-bars i{display:block;width:100%;max-width:26px;border-radius:6px;background:var(--faint);min-height:3px}
+.aw-bars .today i{background:var(--fg)}
+.aw-bars .over i{background:#e66767}
+.aw-bars span{font:500 11px var(--mono);color:var(--muted)}
+.aw-bars .today span{color:var(--fg)}
+#awCmp{text-align:left;margin:12px 0 0}
 .at-perm ol{margin:0;padding-inline-start:20px;color:var(--muted);font-size:14px;line-height:1.6}
 .at-list{list-style:none;margin:0;padding:0}
 .at-list li{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -503,6 +515,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     <button data-min="0">No limit</button><button data-min="10">10m</button><button data-min="15">15m</button><button data-min="30">30m</button>
     <button data-min="45">45m</button><button data-min="60">1h</button><button data-min="90">1h 30m</button><button data-min="120">2h</button>
   </div>
+  <p class="note" id="atLimitEff" style="text-align:left;margin:8px 0 0" hidden></p>
   <div class="label">Open only at</div>
   <p class="note" style="text-align:left;margin:-4px 0 4px">Outside these hours the app stays closed. No hours set means any time.</p>
   <div id="atWins"></div>
@@ -707,6 +720,11 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
         <p class="note" style="margin:0">Without it, Focus can't notice when you open an app whose time is up, so nothing gets blocked.</p>
         <button class="pill" id="atAccBtn">Set up</button>
       </div>
+      <div class="at-week" id="atWeek" hidden>
+        <div class="aw-top"><div><b id="awSaved"></b><small id="awSavedSub"></small></div><div><b id="awStreak"></b><small id="awStreakSub"></small></div></div>
+        <div class="aw-bars" id="awBars"></div>
+        <p class="note" id="awCmp"></p>
+      </div>
       <div class="label">Watching</div>
       <p class="note" id="atTip" style="margin:-4px 0 4px">Tap an app to give it a daily limit or open hours.</p>
       <ul class="at-list" id="atWatched"></ul>
@@ -726,12 +744,18 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
           <div class="seg small" data-rule="cooldown"><button data-v="0">Off</button><button data-v="5">5m</button><button data-v="10">10m</button><button data-v="15">15m</button></div></div>
         <div class="rule"><span>Delay before loosening<small>Turning limits down or off only takes effect after this</small></span>
           <div class="seg small" data-rule="delay"><button data-v="0">Off</button><button data-v="10">10m</button><button data-v="30">30m</button><button data-v="60">1h</button></div></div>
+        <div class="rule"><span>Shrink limits every week<small>Each limit gets a little smaller every 7 days, never below 10 minutes</small></span>
+          <div class="seg small" id="atShrink"><button data-v="0">Off</button><button data-v="5">5%</button><button data-v="10">10%</button><button data-v="20">20%</button></div></div>
         <div class="label">Quiet times</div>
         <p class="note" style="text-align:left;margin:-4px 0 4px">Closes every app you watch.</p>
         <div class="set-row"><span>Bedtime<small>Watched apps stay closed overnight</small></span>
           <button class="switch" id="bedSw" role="switch" aria-checked="false" aria-label="Bedtime"></button></div>
         <div class="win-row" id="bedTimes"><input type="time" id="bedFrom" aria-label="Bedtime starts"><span>to</span><input type="time" id="bedTo" aria-label="Bedtime ends"></div>
       </div>
+      <div class="label">Reports</div>
+      <div class="set-row"><span>Nightly summary<small>One quiet notification: today's time, limits kept, time saved</small></span>
+        <button class="switch" id="ntSw" role="switch" aria-checked="false" aria-label="Nightly summary"></button></div>
+      <div class="win-row" id="ntRow"><span>At</span><input type="time" id="ntAt" aria-label="Summary time"></div>
       <div class="label">Prayer</div>
       <div class="set-row"><span>Prayer reminder<small>At each adhan, the app you're in stops until you tap “I understand”</small></span>
         <button class="switch" id="prSw" role="switch" aria-checked="false" aria-label="Prayer reminder"></button></div>
@@ -2201,6 +2225,21 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   AT.bedtime = AT.bedtime || { on: false, from: 23 * 60, to: 6 * 60 };
   // where and which method: Android works that out from your location; adjust = your minutes +/- for each prayer
   AT.prayer = { on: !!(AT.prayer && AT.prayer.on), adjust: (AT.prayer && Array.isArray(AT.prayer.adjust) ? AT.prayer.adjust : [0, 0, 0, 0, 0]) };
+  AT.hist = AT.hist || {};           // finished days: {u: {package: ms}, l: {package: limit that day}}
+  AT.base = AT.base || {};           // package -> daily ms before you watched it, for "time saved"
+  AT.watchedAt = AT.watchedAt || {}; // package -> when you started watching it
+  AT.limitsAt = AT.limitsAt || {};   // package -> when its limit was last set (shrinking starts from then)
+  if (AT.shrink && !AT.shrink.pct) AT.shrink = null;
+  if (AT.nightly === undefined) AT.nightly = 22 * 60; // the nightly summary is on at 10 PM unless you turn it off
+  const DAYMS = 864e5;
+  // the limit after any weekly shrinking; Android works it out the same way
+  function effLimit(pkg, now) {
+    now = now || Date.now();
+    const base = AT.limits[pkg] || 0, sh = AT.shrink;
+    if (!base || !sh || !sh.pct) return base;
+    const since = Math.max(sh.since || now, AT.limitsAt[pkg] || 0), weeks = Math.max(0, Math.floor((now - since) / (7 * DAYMS)));
+    return Math.max(Math.min(base, 10), Math.round(base * Math.pow(1 - sh.pct / 100, weeks)));
+  }
   const cleanWins = () => { const o = {};
     Object.keys(AT.windows).forEach(k => { const w = (AT.windows[k] || []).filter(x => x.from !== x.to); if (w.length && AT.watched.includes(k)) o[k] = w; });
     return o; };
@@ -2210,7 +2249,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       if (AT_OK && FocusAndroid.setAppRules) FocusAndroid.setAppRules(JSON.stringify({ track: !!AT.trackOnly, limits: AT.limits,
         friction: AT.friction || 'none', emergency: AT.emergency || 0, cooldown: AT.cooldown || 0, delay: AT.delay || 0,
         watched: AT.watched, windows: cleanWins(), bedtime: AT.bedtime.on ? { from: AT.bedtime.from, to: AT.bedtime.to } : null,
-        prayer: AT.prayer.on ? { adjust: AT.prayer.adjust } : null }));
+        prayer: AT.prayer.on ? { adjust: AT.prayer.adjust } : null,
+        shrink: AT.shrink, limitsAt: AT.limitsAt, nightly: AT.nightly == null ? -1 : AT.nightly, base: AT.base }));
     } catch (e) {}
   }
   const fmtUse = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
@@ -2237,7 +2277,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   }
   const atImg = pkg => '<img class="at-ic" alt="" ' + (atIcons[pkg] ? 'src="' + atIcons[pkg] + '"' : 'data-ic="' + esc(pkg) + '"') + '>';
   function atRow(a, max, btn) {
-    const lim = btn === 'remove' && !AT.trackOnly ? (AT.limits[a.pkg] || 0) : 0, full = lim ? lim * 60000 : max;
+    const lim = btn === 'remove' && !AT.trackOnly ? effLimit(a.pkg) : 0, full = lim ? lim * 60000 : max;
     const pct = full ? Math.min(100, Math.max(1, Math.round(a.ms / full * 100))) : 0, over = lim && a.ms >= full;
     return '<li' + (btn === 'remove' ? ' class="at-tap" data-limit="' + esc(a.pkg) + '" data-name="' + esc(a.name) + '"' : '') + '>' +
       atImg(a.pkg) + '<span class="at-mid"><span class="at-name">' + esc(a.name) + '</span>' +
@@ -2273,7 +2313,87 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     $('atNeedAcc').hidden = !anyLimit || acc;
     $('atTip').hidden = !watched.length || !!AT.trackOnly;
     $('atTrack').setAttribute('aria-checked', String(!!AT.trackOnly));
+    loadHistory();
+    paintWeek(byPkg);
     paintRules();
+  }
+  // ---- stage 5: this week, streaks, time saved, shrinking limits, nightly summary
+  let histAt = 0;
+  function limitsOn(d) { // the limits that applied on day d (only ones set before that day ended)
+    const l = {}, end = kdate(d).getTime() + DAYMS;
+    AT.watched.forEach(p => { if (AT.limits[p] && (AT.limitsAt[p] || 0) < end) l[p] = effLimit(p, end - 1); });
+    return l;
+  }
+  function loadHistory() {
+    if (!FocusAndroid.appHistory || Date.now() - histAt < 600000) return;
+    histAt = Date.now();
+    let days = [];
+    try { days = JSON.parse(FocusAndroid.appHistory(15)); } catch (e) { return; }
+    const today = dkey(Date.now());
+    days.forEach(x => {
+      if (x.d >= today) return;
+      const apps = x.apps || {}, keys = Object.keys(apps).sort((a, b) => apps[b] - apps[a]).slice(0, 40), had = AT.hist[x.d];
+      if (!keys.length && had) return; // Android forgot this day; keep what we saved
+      const u = {}; keys.forEach(k => { u[k] = apps[k]; });
+      AT.hist[x.d] = { u, l: had && had.l ? had.l : limitsOn(x.d) };
+    });
+    Object.keys(AT.hist).forEach(d => { if (daysBetween(d, today) > 60) delete AT.hist[d]; });
+    AT.watched.forEach(p => { if (AT.base[p] == null) { const b = baselineFor(p); if (b != null) AT.base[p] = b; } });
+    save(); pushRules();
+  }
+  // how much you used an app per day before you watched it: the average of up to 7 earlier days (needs 2)
+  function baselineFor(p) {
+    const from = AT.watchedAt[p] ? dkey(AT.watchedAt[p]) : dkey(Date.now());
+    const ds = Object.keys(AT.hist).filter(d => d < from && Object.keys(AT.hist[d].u).length).sort().slice(-7);
+    if (ds.length < 2) return null;
+    return Math.round(ds.reduce((n, d) => n + (AT.hist[d].u[p] || 0), 0) / ds.length);
+  }
+  function paintWeek(byPkg) {
+    const W = AT.watched, today = dkey(Date.now());
+    if (!W.length) { $('atWeek').hidden = true; return; }
+    const use = d => { const h = AT.hist[d]; return h ? W.reduce((n, p) => n + (h.u[p] || 0), 0) : null; };
+    const todayMs = W.reduce((n, p) => n + ((byPkg[p] || {}).ms || 0), 0);
+    const days = [...Array(7)].map((_, i) => addDays(today, i - 6));
+    const vals = days.map(d => d === today ? todayMs : use(d));
+    const max = Math.max(1, ...vals.map(v => v || 0));
+    // red only on a day you went past one of that day's limits
+    const overOn = d => {
+      if (d === today) return W.some(p => effLimit(p) && ((byPkg[p] || {}).ms || 0) > effLimit(p) * 60000 + 60000);
+      const h = AT.hist[d];
+      return !!(h && h.l && Object.keys(h.l).some(p => h.l[p] > 0 && (h.u[p] || 0) > h.l[p] * 60000 + 60000));
+    };
+    $('awBars').innerHTML = days.map((d, i) => {
+      const v = vals[i], over = overOn(d);
+      return '<div class="' + (d === today ? 'today' : '') + (over ? ' over' : '') + '" title="' + fmtUse(v || 0) + '"><i style="height:' +
+        (v ? Math.max(3, Math.round(v / max * 70)) : 3) + 'px"></i><span>' + 'SMTWTFS'[kdate(d).getDay()] + '</span></div>';
+    }).join('');
+    // time saved over the last 7 finished days
+    const done = [...Array(7)].map((_, i) => addDays(today, -1 - i)).filter(d => AT.hist[d]);
+    let saved = 0, withBase = W.filter(p => AT.base[p] > 0);
+    done.forEach(d => withBase.forEach(p => { saved += Math.max(0, AT.base[p] - (AT.hist[d].u[p] || 0)); }));
+    $('awSaved').textContent = withBase.length ? fmtUse(saved) : '\u2013';
+    $('awSavedSub').textContent = withBase.length ? 'saved in the last 7 days, against your usual use' : 'Time saved shows once Focus knows your usual use';
+    // streak: finished days in a row inside every limit
+    let streak = 0;
+    for (let i = 1; i <= 60; i++) {
+      const h = AT.hist[addDays(today, -i)], ks = h && h.l ? Object.keys(h.l).filter(p => h.l[p] > 0) : [];
+      if (!ks.length || !ks.every(p => (h.u[p] || 0) <= h.l[p] * 60000 + 60000)) break;
+      streak++;
+    }
+    const anyLimit = W.some(p => AT.limits[p]);
+    $('awStreak').textContent = anyLimit ? streak + (streak === 1 ? ' day' : ' days') : '\u2013';
+    $('awStreakSub').textContent = anyLimit ? 'in a row inside all your limits' : 'Set a limit to start a streak';
+    // this week against last week (finished days only)
+    const sum = arr => arr.reduce((n, d) => n + (use(d) || 0), 0), have = arr => arr.filter(d => AT.hist[d]).length;
+    const a = [...Array(7)].map((_, i) => addDays(today, -1 - i)), b = [...Array(7)].map((_, i) => addDays(today, -8 - i));
+    let cmp = '';
+    if (have(a) >= 5 && have(b) >= 5) {
+      const x = sum(a), y = sum(b), diff = x - y, pct = y ? Math.round(Math.abs(diff) / y * 100) : 0;
+      cmp = 'Last 7 days: ' + fmtUse(x) + ', ' + (Math.abs(diff) < 60000 ? 'the same as the week before' :
+        (diff < 0 ? fmtUse(-diff) + ' less' : fmtUse(diff) + ' more') + ' than the week before' + (pct ? ' (' + (diff < 0 ? '\u2212' : '+') + pct + '%)' : '')) + '.';
+    } else if (have(a)) cmp = 'Last 7 days: ' + fmtUse(sum(a)) + ' on watched apps.';
+    $('awCmp').textContent = cmp; $('awCmp').hidden = !cmp;
+    $('atWeek').hidden = false;
   }
   // ---- stage 3: unlocks, emergencies, breaks and delay
   const hhmm = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -2289,6 +2409,10 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     $('atStatus').hidden = !lines.length; $('atStatus').textContent = lines.join(' ');
     $('bedSw').setAttribute('aria-checked', String(!!AT.bedtime.on)); $('bedTimes').hidden = !AT.bedtime.on;
     $('bedFrom').value = toHM(AT.bedtime.from); $('bedTo').value = toHM(AT.bedtime.to);
+    const pct = AT.shrink ? AT.shrink.pct : 0;
+    $('atShrink').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === pct));
+    $('ntSw').setAttribute('aria-checked', String(AT.nightly != null && AT.nightly >= 0)); $('ntRow').hidden = !(AT.nightly >= 0);
+    if (AT.nightly >= 0) $('ntAt').value = toHM(AT.nightly);
     paintPrayer();
   }
   function paintPrayer() {
@@ -2315,8 +2439,8 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
   const clock12 = m => { const h = Math.floor(m / 60) % 24; return (h % 12 || 12) + ':' + String(m % 60).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
   function atToggle(pkg, on) {
     const i = AT.watched.indexOf(pkg);
-    if (on && i < 0) AT.watched.push(pkg);
-    if (!on && i >= 0) { AT.watched.splice(i, 1); delete AT.limits[pkg]; delete AT.windows[pkg]; }
+    if (on && i < 0) { AT.watched.push(pkg); AT.watchedAt[pkg] = Date.now(); histAt = 0; }
+    if (!on && i >= 0) { AT.watched.splice(i, 1); [AT.limits, AT.windows, AT.base, AT.watchedAt, AT.limitsAt].forEach(o => { delete o[pkg]; }); }
     save(); pushRules();
   }
   function atPaintPicker() {
@@ -2364,6 +2488,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     let limPkg = '';
     const paintLimit = () => {
       $('atLimitSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === (AT.limits[limPkg] || 0)));
+      const eff = effLimit(limPkg), base = AT.limits[limPkg] || 0;
+      $('atLimitEff').hidden = !(base && eff < base);
+      $('atLimitEff').textContent = 'After weekly shrinking, it is ' + fmtUse(eff * 60000) + ' a day now.';
       const w = AT.windows[limPkg] || [];
       $('atWins').innerHTML = w.map((x, i) => '<div class="win-row"><input type="time" data-w="' + i + '" data-k="from" value="' + toHM(x.from) +
         '" aria-label="Opens"><span>to</span><input type="time" data-w="' + i + '" data-k="to" value="' + toHM(x.to) +
@@ -2379,7 +2506,7 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       const b = e.target.closest('button[data-min]');
       if (!b) return;
       const m = +b.dataset.min;
-      if (m) AT.limits[limPkg] = m; else delete AT.limits[limPkg];
+      if (m) { AT.limits[limPkg] = m; AT.limitsAt[limPkg] = Date.now(); } else { delete AT.limits[limPkg]; delete AT.limitsAt[limPkg]; }
       save(); pushRules(); paintLimit();
     });
     $('atWinAdd').addEventListener('click', () => {
@@ -2421,6 +2548,14 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
       if (!b) return;
       AT.prayer.adjust[+b.dataset.preset] = 0; save(); pushRules(); paintPrayer();
     });
+    $('atShrink').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const pct = +b.dataset.v;
+      AT.shrink = pct ? { pct, since: AT.shrink && AT.shrink.pct ? AT.shrink.since : Date.now() } : null;
+      save(); pushRules(); paintAppTime();
+    });
+    $('ntSw').addEventListener('click', () => { AT.nightly = AT.nightly >= 0 ? -1 : 22 * 60; save(); pushRules(); paintRules(); });
+    $('ntAt').addEventListener('change', () => { if ($('ntAt').value) { AT.nightly = fromHM($('ntAt').value); save(); pushRules(); } });
     $('atLimitDone').addEventListener('click', () => { $('atLimitSheet').hidden = true; paintAppTime(); });
     $('atTrack').addEventListener('click', () => { AT.trackOnly = !AT.trackOnly; save(); pushRules(); paintAppTime(); });
     $('atAccBtn').addEventListener('click', () => { try { FocusAndroid.setupLine(); } catch (e) {} });
@@ -2442,6 +2577,9 @@ body.compact .app,body.compact .fs,body.compact #run,body.compact #done{visibili
     setInterval(paintAppTime, 30000);
   }
   atShowTabs();
+  // opened from the nightly summary or the widget: straight to App Time
+  window.focusOpenTab = t => { if (t !== 'apptime' || (AT_OK && AT.on)) showTab(t); };
+  if (location.hash === '#apptime') setTimeout(() => window.focusOpenTab('apptime'), 0);
 
   // ---- boot
   showPick(S.pick);
