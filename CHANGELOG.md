@@ -1,5 +1,10 @@
 # Changelog
 
+## Web 1.5.0 (2026-11-13): Leaderboard
+- Progress has a switch at the top: My progress or Leaderboard.
+- Type your name, start a group, and type its code on your other devices and your friend's. The same name on several devices adds up as one person.
+- Today or this week (from Monday), with each person's days in a row. Only names and daily focus minutes are shared.
+
 ## Android app (2026-11-13): your own prayer times
 - The five prayer times are a list. Change any time to match your mosque; Focus keeps that difference (say +3 min) every day. The ↺ button goes back to the calculated time.
 
