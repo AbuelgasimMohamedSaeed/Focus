@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<meta name="focus-build" content="2026-11-23.2">
+<meta name="focus-build" content="2026-11-23.3">
 <meta name="description" content="Focus: a calm timer for meditation and study, with a dhikr counter, wisdom quotes and progress charts.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -78,9 +78,17 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .dial{flex:1;display:flex;flex-direction:column;justify-content:center;gap:30px;min-height:300px}
 .dial{cursor:ns-resize}
 /* a running sit, right on the Sit page: the ring empties as the time runs out (fills when counting up) */
-#sit.running .dial{display:none}
-.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;min-height:300px}
-.ring-wrap{position:relative;width:min(72vw,300px,36vh);aspect-ratio:1}
+#sit.running .dial,#sit.running #sitSetBtn{display:none}
+/* while a sit runs the Sit page stays light: the words shrink to one line, the ring takes the space */
+#sit.running .wisdom{margin-top:12px;padding:10px 14px;gap:0}
+#sit.running .w-ar:not([hidden]) ~ .w-en,#sit.running .w-src{display:none}
+#sit.running .w-ar,#sit.running .w-en{-webkit-line-clamp:1}
+#sit.running .w-ar{font-size:18px;line-height:1.6}
+#sit.running .label-chip{margin-top:10px}
+@media (max-height:760px){.dial{min-height:220px;gap:18px}}
+@media (max-width:600px){.cap{padding-inline-end:92px}.cap-day{font-size:clamp(26px,7.6vw,34px)}} /* clear of the two corner buttons */
+.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:0;padding-block:8px}
+.ring-wrap{position:relative;width:min(70vw,290px,34vh);aspect-ratio:1}
 .ring{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
 .ring circle{fill:none;stroke-width:5}
 .ring .ring-bg{stroke:var(--line)}
@@ -88,7 +96,7 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .ring-wrap.over .ring-fg{animation:ringPulse 2.4s ease-in-out infinite}
 @keyframes ringPulse{50%{opacity:.45}}
 .ring-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:0 14%}
-.ring-clock{font:500 clamp(40px,13vw,64px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.ring-clock{font:500 clamp(36px,min(12vw,7vh),60px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
 .ring-sub{color:var(--muted);font-size:13px;line-height:1.35}
 .sr-ctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .sr-ctl button{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans);transition:transform .2s var(--ease),border-color .25s}
@@ -109,6 +117,8 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .round-btn{flex:none;width:58px;height:58px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--fg);display:grid;place-items:center;cursor:pointer}
 .round-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
 .at-list.lbl-list li{grid-template-columns:1fr auto}
+.b-devs li span{display:flex;flex-direction:column;gap:2px}
+.b-devs li small{color:var(--muted);font-size:13px}
 .bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .bg-tile{position:relative;aspect-ratio:3/4;border-radius:14px;border:2px solid transparent;background:var(--card) center/cover no-repeat;cursor:pointer;padding:0;overflow:hidden}
 .bg-tile[aria-pressed="true"]{border-color:var(--fg)}

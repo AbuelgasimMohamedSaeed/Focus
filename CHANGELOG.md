@@ -1,5 +1,11 @@
 # Changelog
 
+## Web — one app on all your devices
+- A running sit counts in Today and the total minute by minute, the same on every linked device.
+- Leaderboard › You lists your linked devices with when each was last open; remove ones you don't use.
+- The words card keeps the same words until you tap it or 10 minutes pass.
+- Calmer Sit page on phones while a sit runs: the words shrink to one line, the settings button hides, the ring fits short screens. The header no longer runs under the corner buttons.
+
 ## Web — updates itself; shared progress catches up after the background
 - Focus checks for a newer version and switches to it when you open or leave the app (never during a sit). The phone and laptop apps load this page, so they update too.
 - Linked devices re-read each other's sits when Focus comes back to the front and every 2 minutes.
