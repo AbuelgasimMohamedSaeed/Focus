@@ -1,5 +1,9 @@
 # Changelog
 
+## Web — updates itself; shared progress catches up after the background
+- Focus checks for a newer version and switches to it when you open or leave the app (never during a sit). The phone and laptop apps load this page, so they update too.
+- Linked devices re-read each other's sits when Focus comes back to the front and every 2 minutes.
+
 ## Web — timer on the Sit page, Deep focus, shared progress
 - A running sit now shows on the Sit page as a ring (empties as time runs out, fills when counting up), with − 5 min, Hold to end and + 5 min. The rest of the app stays usable; other tabs show a small timer bar.
 - "Deep focus" opens the full-screen timer, with your background photo and a Hide/Show photo button.
