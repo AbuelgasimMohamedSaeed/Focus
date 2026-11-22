@@ -1,5 +1,11 @@
 # Changelog
 
+## Web — timer on the Sit page, Deep focus, shared progress
+- A running sit now shows on the Sit page as a ring (empties as time runs out, fills when counting up), with − 5 min, Hold to end and + 5 min. The rest of the app stays usable; other tabs show a small timer bar.
+- "Deep focus" opens the full-screen timer, with your background photo and a Hide/Show photo button.
+- Time's up and linked devices never take over the screen.
+- Linked devices share progress: total time, streak, charts and history include sits from all of them. Deleting a sit from History hides it on all of them.
+
 ## Web — use the app while a sit runs
 - "Use the app" on the timer shrinks it to a bar above the tabs; Dhikr, label and tabs stay usable. Tap the bar to go back.
 - Your background photo now shows behind the running timer.

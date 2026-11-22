@@ -47,7 +47,7 @@ body.has-bg #bg{opacity:1}
 body.has-bg::before{display:none}
 body.has-bg{background-color:#000}
 body.has-bg.theme-light{background-color:#fff}
-@supports selector(:has(a)){body.has-bg .run{background:transparent}body.has-bg:has(.run:not([hidden])) .app{visibility:hidden}}
+@supports selector(:has(a)){body.has-bg:not(.run-plain) .run{background:transparent}body.has-bg:has(.run:not([hidden])) .app{visibility:hidden}}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -76,6 +76,27 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 /* Sit */
 .dial{flex:1;display:flex;flex-direction:column;justify-content:center;gap:30px;min-height:300px}
 .dial{cursor:ns-resize}
+/* a running sit, right on the Sit page: the ring empties as the time runs out (fills when counting up) */
+#sit.running .dial{display:none}
+.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;min-height:300px}
+.ring-wrap{position:relative;width:min(72vw,300px,36vh);aspect-ratio:1}
+.ring{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.ring circle{fill:none;stroke-width:5}
+.ring .ring-bg{stroke:var(--line)}
+.ring .ring-fg{stroke:var(--c,var(--fg));stroke-linecap:round;stroke-dasharray:100 100;transition:stroke-dashoffset .3s linear,stroke .4s;filter:drop-shadow(0 0 6px var(--glow))}
+.ring-wrap.over .ring-fg{animation:ringPulse 2.4s ease-in-out infinite}
+@keyframes ringPulse{50%{opacity:.45}}
+.ring-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:0 14%}
+.ring-clock{font:500 clamp(40px,13vw,64px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.ring-sub{color:var(--muted);font-size:13px;line-height:1.35}
+.sr-ctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.sr-ctl button{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans);transition:transform .2s var(--ease),border-color .25s}
+.sr-ctl button:active{transform:scale(.95)}
+.sr-ctl button:disabled{opacity:.35;cursor:default}
+.sr-ctl .hold{position:relative;bottom:auto;width:auto;height:40px;padding:0 18px;margin:0;background:transparent}
+.sr-ctl .hold span{mix-blend-mode:normal;transition:color .2s}
+.sr-ctl .hold.on span{color:var(--pill-fg);transition:color .75s steps(1,end)}
+.sr-ctl .hold.tap{background:var(--fg)}
 .chip{display:inline-flex;align-items:center;gap:8px}
 .chip i{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted));flex:none}
 /* the label: one small chip at the top left; tap it for the list */
@@ -357,9 +378,10 @@ body.calm .fs{opacity:.12}
 .adj button:disabled{opacity:.35;cursor:default}
 .run > .adj{position:absolute}
 .hold.tap{background:var(--fg);border-color:var(--fg)}
-.run-use{position:absolute;top:calc(60px + env(safe-area-inset-top,0px));left:0;right:0;margin-inline:auto;width:max-content;height:34px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans);transition:opacity 1.2s}
-.run > .run-use{position:absolute}
-.run.idle .run-use{opacity:.12}
+.run-top{position:absolute;top:calc(60px + env(safe-area-inset-top,0px));left:0;right:0;display:flex;gap:8px;justify-content:center;transition:opacity 1.2s}
+.run > .run-top{position:absolute}
+.run-top button{height:34px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans)}
+.run.idle .run-top{opacity:.12}
 .run-bar{display:flex;align-items:center;gap:10px;margin:0 12px 8px;padding:12px 16px;border-radius:16px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 14px var(--sans);cursor:pointer;text-align:left}
 .run-bar[hidden]{display:none}
 .run-bar i{width:9px;height:9px;border-radius:50%;background:var(--c,#3987e5);flex:none}
