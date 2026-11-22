@@ -10,6 +10,8 @@ import android.view.accessibility.AccessibilityEvent;
 /**
  * Focus's Accessibility service. It draws the time line over the status bar, and for App Time it notices
  * which app comes to the front, so an app whose daily time is up gets the block screen.
+ * It only reads which app is open, and only ever acts (block screens, prayer reminder, gray screen, the sit line)
+ * on the apps you watch: banking and every other app you haven't added are left completely alone.
  * It only reads which app is open. The one exception is website blocking, if you turn it on: while a browser is open,
  * it reads that browser's address bar, and nothing else.
  * Battery: it does nothing until an app is opened, and then sets one timer for when that app's time runs out.
@@ -46,6 +48,7 @@ public class FocusAccessibility extends AccessibilityService {
         if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
         if (front != null && System.currentTimeMillis() >= dueAt) check(front); // the timer slept with the phone
         if (pkg.equals(home())) { // back on the home screen: no app is open
+            TopLine.show(true);
             leave();
             main.removeCallbacks(recheck);
             dueAt = Long.MAX_VALUE;
@@ -59,6 +62,7 @@ public class FocusAccessibility extends AccessibilityService {
         if (pkg.equals(front)) return;
         leave();
         front = pkg;
+        TopLine.show(Rules.isWatched(this, pkg)); // the sit line only over the home screen and the apps you watch
         check(pkg);
         listen(Sites.browser(pkg) && !Rules.trackOnly(this) && Rules.sites(this) != null);
         if (listening) {
@@ -98,14 +102,15 @@ public class FocusAccessibility extends AccessibilityService {
     }
 
     /**
-     * Gray screen: on at bedtime (if you chose it), and while a watched app is past half its daily limit
-     * (if you chose that). Off otherwise, but only if Focus turned it on.
+     * Gray screen, only while a watched app is open: at bedtime (if you chose it), and once that app is past half its
+     * daily limit (if you chose that). Off everywhere else, but only if Focus turned it on.
      */
     private void gray() {
         if (!Gray.allowed(this)) return;
         long now = System.currentTimeMillis();
-        boolean want = Rules.grayBedtime(this, now);
-        if (!want && front != null && Rules.grayHalf(this) && !Rules.trackOnly(this)) {
+        boolean inWatched = front != null && Rules.isWatched(this, front);
+        boolean want = inWatched && Rules.grayBedtime(this, now);
+        if (!want && inWatched && Rules.grayHalf(this) && !Rules.trackOnly(this)) {
             int lim = Rules.limit(this, front);
             want = lim > 0 && AppUsage.usedToday(this, front) >= lim * 30_000L;
         }
@@ -142,9 +147,10 @@ public class FocusAccessibility extends AccessibilityService {
     private void check(String pkg) {
         main.removeCallbacks(recheck);
         dueAt = Long.MAX_VALUE;
+        if (!Rules.isWatched(this, pkg)) return; // banks and every other app you don't watch: Focus does nothing there
         long now = System.currentTimeMillis();
         String prayer = Rules.prayerDue(this, now);
-        if (prayer != null) { // the adhan has come: a reminder over any app, until "I understand"
+        if (prayer != null) { // the adhan has come: a reminder over this watched app, until "I understand"
             block(pkg, BlockActivity.PRAYER, now, 0, prayer);
             return;
         }

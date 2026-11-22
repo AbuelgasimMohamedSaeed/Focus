@@ -254,6 +254,11 @@ final class Rules {
         }
     }
 
+    /** Is this app on your watch list? Focus only ever acts on these. */
+    static boolean isWatched(Context c, String pkg) {
+        return pkg != null && watched(get(c), pkg);
+    }
+
     private static boolean watched(JSONObject r, String pkg) {
         JSONArray w = r.optJSONArray("watched");
         if (w != null) for (int i = 0; i < w.length(); i++) if (pkg.equals(w.optString(i))) return true;

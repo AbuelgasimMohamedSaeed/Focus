@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Focus</string>
-    <string name="accessibility_desc">Lets Focus draw the line at the very top of your screen that shows the time left while you sit, show App Time\'s block screen when an app\'s time is up, and, if you turn on website blocking, read the address bar of your browser to close the sites you blocked. Focus never reads or keeps anything else on your screen.</string>
+    <string name="accessibility_desc">Lets Focus see which app is open, so it can act on the apps you choose to watch, and only those: the line at the top of the screen during a sit, App Time\'s block screen, the prayer reminder and the gray screen. If you turn on website blocking, it also reads your browser\'s address bar to close the sites you blocked. Banking and every other app you haven\'t added are left alone, and Focus never reads or keeps anything on your screen.</string>
     <string name="widget_desc">Time left today on the apps you limit</string>
 </resources>

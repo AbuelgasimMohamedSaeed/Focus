@@ -6,7 +6,6 @@ import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -15,8 +14,9 @@ import android.view.WindowManager;
  * The line along the very top of the screen while a sit runs and Focus is closed:
  * full at the start, shrinking to nothing at the end, then a full amber line for extra time.
  *
- * With Focus's Accessibility service on, it is drawn over the status bar (the strip with the clock);
- * without it, Android only allows it below. Battery: it is redrawn only when it would move by about a pixel
+ * It is drawn over the status bar (the strip with the clock) by Focus's Accessibility service, and only shows on the
+ * home screen and over the apps you watch, never over banking or any other app you haven't added. Without the
+ * Accessibility service Focus can't tell which app is open, so there is no line. Battery: it is redrawn only when it would move by about a pixel
  * (every 2 to 15 seconds), never while the screen is off, and not at all once time is up.
  */
 final class TopLine {
@@ -27,6 +27,7 @@ final class TopLine {
     private static View bar;
     private static Context barHost;
     private static Sit sit;
+    private static boolean allowed; // the app in front is one you watch (or the home screen)
 
     private TopLine() {}
 
@@ -34,6 +35,14 @@ final class TopLine {
     static void update(Context c, Sit s) {
         Context a = c.getApplicationContext();
         main.post(() -> apply(a, s));
+    }
+
+    /** The app in front changed: show the line over the home screen and watched apps, hide it everywhere else. */
+    static void show(boolean ok) {
+        main.post(() -> {
+            allowed = ok;
+            if (bar != null) bar.setVisibility(ok ? View.VISIBLE : View.GONE);
+        });
     }
 
     /** The Accessibility service started or stopped: draw the line again with whatever is allowed now. */
@@ -48,11 +57,11 @@ final class TopLine {
         app = c;
         sit = s;
         FocusAccessibility svc = FocusAccessibility.instance;
-        Context host = svc != null ? svc : c;
-        if (s == null || (svc == null && !Settings.canDrawOverlays(c))) {
+        if (s == null || svc == null) { // without the Accessibility service Focus can't tell which app is open: no line
             remove();
             return;
         }
+        Context host = svc;
         if (bar != null && barHost != host) remove(); // the Accessibility service just came or went
         if (bar == null) {
             float d = c.getResources().getDisplayMetrics().density;
@@ -68,6 +77,7 @@ final class TopLine {
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
             View v = new View(host);
             v.setPivotX(0);
+            v.setVisibility(allowed ? View.VISIBLE : View.GONE);
             try {
                 host.getSystemService(WindowManager.class).addView(v, lp);
                 bar = v;

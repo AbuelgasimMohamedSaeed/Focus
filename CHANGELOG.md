@@ -1,5 +1,9 @@
 # Changelog
 
+## Android app (2026-11-22): Focus only touches the apps you watch
+- The prayer reminder, the gray screen and the sit line at the top now only appear over the apps on your watch list (and the line on the home screen). Banking and every app you haven't added are left completely alone.
+- Without Focus's Accessibility setting there is no top line any more, because Focus can't tell which app is open.
+
 ## 2026-11-13: App Time stages 5 to 8, Arabic
 - This week on App Time: time saved against your usual use, days in a row inside your limits, a bar per day (red on days you went over a limit), and this week against last week.
 - Shrink limits every week (5, 10 or 20%, never below 10 minutes).

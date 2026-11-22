@@ -253,13 +253,13 @@ public class MainActivity extends Activity {
                         + "2. Find Focus (on Xiaomi: under Downloaded apps) and turn it on.\n\n"
                         + "If Android says it is a restricted setting: open Focus's App info, tap \u22ee at the top right, "
                         + "choose Allow restricted settings, and try again.\n\n"
-                        + "Focus only sees which app is open, plus the browser's address bar when website blocking is on.",
+                        + "Focus only sees which app is open (plus the browser's address bar when website blocking is on), and only acts on the apps you watch. Banking and other apps are left alone.",
                         "يستخدمها Focus للخط أعلى الشاشة الذي يُظهر الوقت المتبقي، ولشاشة الحظر في وقت التطبيقات، ولإغلاق المواقع المحظورة في المتصفح إن شغّلت ذلك.\n\n"
                         + "1. اضغط فتح الإعدادات.\n"
                         + "2. ابحث عن Focus (في شاومي: ضمن التطبيقات المنزّلة) وشغّله.\n\n"
                         + "إذا قال أندرويد إنه إعداد مقيّد: افتح معلومات تطبيق Focus، اضغط \u22ee في الأعلى، "
                         + "اختر السماح بالإعدادات المقيدة، ثم حاول مجددًا.\n\n"
-                        + "يرى Focus فقط التطبيق المفتوح، وشريط عنوان المتصفح عند تشغيل حظر المواقع."))
+                        + "يرى Focus فقط التطبيق المفتوح (وشريط عنوان المتصفح عند تشغيل حظر المواقع)، ولا يعمل إلا على التطبيقات التي تراقبها. تطبيقات البنوك وغيرها لا يقترب منها."))
                 .setPositiveButton(L.t(this, "Open settings", "فتح الإعدادات"), (d, w) -> {
                     try {
                         startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
