@@ -1,5 +1,10 @@
 # Changelog
 
+## Web (2026-11-23): linked devices
+- Devices with the same name share one live timer: start, change (+5/−5) or end a sit on one, and the others follow within a second. A session is saved once, by the device you end it on.
+- Every device already on the leaderboard keeps working as it is. A new device that wants a name already in use needs a code from one of that name's devices (Leaderboard › Add a device; works once, for 10 minutes). No limit on how many devices link.
+- Names are fixed once linked; to use another name, leave the leaderboard and join again.
+
 ## Android app (2026-11-22): nothing sensitive
 - Focus no longer asks for Accessibility, Usage access, location or system settings, so Google Play Protect has nothing to block.
 - Removed with them: the App Time page (limits, block screens, open hours, bedtime, reports, streaks, nightly summary), website blocking, the prayer reminder screen, the gray screen and the App Time widget.
