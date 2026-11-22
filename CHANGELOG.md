@@ -1,5 +1,10 @@
 # Changelog
 
+## Web — use the app while a sit runs
+- "Use the app" on the timer shrinks it to a bar above the tabs; Dhikr, label and tabs stay usable. Tap the bar to go back.
+- Your background photo now shows behind the running timer.
+- The Dhikr goal white screen now works with a background photo too.
+
 ## Web (2026-11-23): linked devices
 - Devices with the same name share one live timer: start, change (+5/−5) or end a sit on one, and the others follow within a second. A session is saved once, by the device you end it on.
 - Every device already on the leaderboard keeps working as it is. A new device that wants a name already in use needs a code from one of that name's devices (Leaderboard › Add a device; works once, for 10 minutes). No limit on how many devices link.
