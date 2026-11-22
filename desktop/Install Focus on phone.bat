@@ -9,7 +9,7 @@ echo.
 echo  Before you go on:
 echo   1. Phone: Settings ^> About phone ^> tap "OS version" 7 times.
 echo   2. Phone: Settings ^> Additional settings ^> Developer options:
-echo      turn on "USB debugging", "Install via USB" and "USB debugging (Security settings)".
+echo      turn on "USB debugging" and "Install via USB".
 echo   3. Plug the phone into this laptop with a USB cable.
 echo.
 pause
@@ -49,8 +49,6 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-rem the gray screen permission, while we are connected (harmless if already given)
-"%ADB%" shell pm grant io.github.abuelgasimmohamedsaeed.focus android.permission.WRITE_SECURE_SETTINGS >nul 2>nul
 echo.
 echo  Done. Focus is installed on the phone.
 echo  From now on, update it with the Update button inside Focus.

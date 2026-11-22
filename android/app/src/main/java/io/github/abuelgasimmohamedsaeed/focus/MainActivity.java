@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(this), "FocusAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
-        web.loadUrl(URL + ("apptime".equals(getIntent().getStringExtra("tab")) ? "#apptime" : ""));
+        web.loadUrl(URL);
         loadedAt = System.currentTimeMillis();
 
         if (Build.VERSION.SDK_INT >= 33
@@ -116,44 +116,6 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
         }
         keepScreenOn(Sit.load(this) != null);
-    }
-
-    /** Opened again from a notification or the widget that points at a page (App Time). */
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        String tab = intent.getStringExtra("tab");
-        if (web != null && "apptime".equals(tab)) web.evaluateJavascript("window.focusOpenTab && focusOpenTab('apptime')", null);
-    }
-
-    private static final int ASK_LOCATION = 7;
-
-    /** Prayer times for where you are: ask for rough location, or open Focus's settings if it was refused for good. */
-    void askLocation() {
-        if (Place.allowed(this)) {
-            Place.refresh(this, true, this::placeChanged);
-        } else if (getSharedPreferences("focus", MODE_PRIVATE).getBoolean("askedLocation", false)
-                && !shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
-        } else {
-            getSharedPreferences("focus", MODE_PRIVATE).edit().putBoolean("askedLocation", true).apply();
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, ASK_LOCATION);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(code, permissions, results);
-        if (code == ASK_LOCATION) {
-            if (Place.allowed(this)) Place.refresh(this, true, this::placeChanged);
-            else placeChanged();
-        }
-    }
-
-    private void placeChanged() {
-        if (web != null) web.evaluateJavascript("window.focusPlaceChanged && focusPlaceChanged()", null);
-        FocusAccessibility.rulesChanged();
     }
 
     @Override
@@ -169,7 +131,6 @@ public class MainActivity extends Activity {
         nm.cancel(Engine.ID_ALERT);
         Sit sit = Sit.load(this);
         Engine.refresh(this, sit); // Focus is on screen: no notification and no top line
-        Place.refresh(this, false, this::placeChanged); // prayer times follow you, checked at most every 6 hours
         keepScreenOn(sit != null);
         long now = System.currentTimeMillis();
         if (sit == null && now - loadedAt > 6 * 3600_000L) { // been open a long time: pick up any new version of the app
@@ -232,42 +193,14 @@ public class MainActivity extends Activity {
     /** The page started or ended a sit. */
     void sitChanged(boolean running) {
         keepScreenOn(running);
-        if (running && FocusAccessibility.instance == null && !prefs().getBoolean("askedLine", false)) {
+        if (running && !Settings.canDrawOverlays(this) && !prefs().getBoolean("askedLine", false)) {
             prefs().edit().putBoolean("askedLine", true).apply();
-            askLine();
+            askOverlay(false); // once: the line at the top while you sit with Focus closed
         }
     }
 
     private android.content.SharedPreferences prefs() {
         return getSharedPreferences("focus", MODE_PRIVATE);
-    }
-
-    /** Accessibility lets Focus draw the line over the status bar, at the very top of the screen. */
-    void askLine() {
-        if (isFinishing() || isDestroyed()) return;
-        new AlertDialog.Builder(this)
-                .setTitle(L.t(this, "Turn on Accessibility for Focus", "شغّل إمكانية الوصول لـ Focus"))
-                .setMessage(L.t(this, "Focus uses it for the line along the very top of the screen that shows your time left, "
-                        + "App Time's block screen, and, if you turn it on, closing blocked websites in your browser.\n\n"
-                        + "1. Tap Open settings.\n"
-                        + "2. Find Focus (on Xiaomi: under Downloaded apps) and turn it on.\n\n"
-                        + "If Android says it is a restricted setting: open Focus's App info, tap \u22ee at the top right, "
-                        + "choose Allow restricted settings, and try again.\n\n"
-                        + "Focus only sees which app is open (plus the browser's address bar when website blocking is on), and only acts on the apps you watch. Banking and other apps are left alone.",
-                        "يستخدمها Focus للخط أعلى الشاشة الذي يُظهر الوقت المتبقي، ولشاشة الحظر في وقت التطبيقات، ولإغلاق المواقع المحظورة في المتصفح إن شغّلت ذلك.\n\n"
-                        + "1. اضغط فتح الإعدادات.\n"
-                        + "2. ابحث عن Focus (في شاومي: ضمن التطبيقات المنزّلة) وشغّله.\n\n"
-                        + "إذا قال أندرويد إنه إعداد مقيّد: افتح معلومات تطبيق Focus، اضغط \u22ee في الأعلى، "
-                        + "اختر السماح بالإعدادات المقيدة، ثم حاول مجددًا.\n\n"
-                        + "يرى Focus فقط التطبيق المفتوح (وشريط عنوان المتصفح عند تشغيل حظر المواقع)، ولا يعمل إلا على التطبيقات التي تراقبها. تطبيقات البنوك وغيرها لا يقترب منها."))
-                .setPositiveButton(L.t(this, "Open settings", "فتح الإعدادات"), (d, w) -> {
-                    try {
-                        startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-                    } catch (Exception ignored) {
-                    }
-                })
-                .setNegativeButton(L.t(this, "Not now", "ليس الآن"), null)
-                .show();
     }
 
     /** "Display over other apps" lets Focus show the mini window. */

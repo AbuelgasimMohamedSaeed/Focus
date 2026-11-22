@@ -1,5 +1,10 @@
 # Changelog
 
+## Android app (2026-11-22): nothing sensitive
+- Focus no longer asks for Accessibility, Usage access, location or system settings, so Google Play Protect has nothing to block.
+- Removed with them: the App Time page (limits, block screens, open hours, bedtime, reports, streaks, nightly summary), website blocking, the prayer reminder screen, the gray screen and the App Time widget.
+- Kept: the Sit timer and bells, Dhikr, Progress, the leaderboard, backups, themes, Arabic, the mini window, updates from inside Focus, and the line at the top during a sit (now just under the status bar, using "Display over other apps").
+
 ## Android app (2026-11-22): Focus only touches the apps you watch
 - The prayer reminder, the gray screen and the sit line at the top now only appear over the apps on your watch list (and the line on the home screen). Banking and every app you haven't added are left completely alone.
 - Without Focus's Accessibility setting there is no top line any more, because Focus can't tell which app is open.
