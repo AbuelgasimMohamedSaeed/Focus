@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<meta name="focus-build" content="2026-11-26.3">
+<meta name="focus-build" content="2026-11-26.4">
 <meta name="description" content="Focus: a calm timer for meditation and study, with a dhikr counter, wisdom quotes and progress charts.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -139,6 +139,12 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .bg-tile[aria-pressed="true"]{border-color:var(--fg)}
 .bg-tile span{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 7px;font-size:11px;font-weight:500;color:#fff;text-align:start;
   background:linear-gradient(transparent,rgba(0,0,0,.6))}
+.bg-sheet .bg-view{margin-top:16px}
+.bg-tile .heart{position:absolute;top:6px;left:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:transform .25s var(--ease)}
+.bg-tile .heart svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
+.bg-tile .heart.on svg{fill:#ff4d6d;stroke:#ff4d6d}
+.bg-tile .heart:active{transform:scale(.85)}
+.bg-empty{grid-column:1/-1;color:var(--muted);font-size:13px;margin:8px 0}
 .bg-tile .x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:12px}
 .bg-sheet{overflow-y:auto}
 .bg-sheet .row2{display:flex;gap:10px;margin-top:12px}
@@ -226,6 +232,11 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .tip{position:absolute;top:0;left:0;pointer-events:none;background:var(--fg);color:var(--pill-fg);font-size:12px;font-weight:500;padding:6px 9px;border-radius:8px;white-space:nowrap;z-index:2}
 .tip b{font-weight:600}
 .label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px}
+.log[hidden]{display:none}
+.label.fold{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:6px 0;text-align:start;cursor:pointer}
+.label.fold svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s var(--ease)}
+.label.fold[aria-expanded="false"] svg{transform:rotate(-90deg)}
+html[dir="rtl"] .label.fold[aria-expanded="false"] svg{transform:rotate(90deg)}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;height:38px;border-radius:999px;border:1px solid var(--faint);background:none;color:var(--muted);font:500 13px var(--mono)}
 .seg button[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--pill-fg)}

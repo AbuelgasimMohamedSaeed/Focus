@@ -1,5 +1,13 @@
 # Changelog
 
+## Web — top-rated HD photos, favorites, history folds
+- Back to featured pictures only (Wikimedia's best rated), and only big ones (3000 px and up). The photo is shown at the size that covers your screen pixel for pixel, so it's always sharp; tiles use bigger previews.
+- Islamic: mostly the featured mosques again; hand-picked Mecca, Medina and Al-Aqsa photos come in now and then (one per pack).
+- Hearts on photos and a Favorites view; favorites are never pushed out.
+- "Download pack": up to 8 photos.
+- Progress: History folds away (tap its title); Focus remembers.
+- Photos no longer filtered by screen shape (that brought weaker photos); the tiles still preview each photo in this screen's shape.
+
 ## Web + Android — photos that fit each screen, holy places, save in HD
 - Each device shows only background photos in its own shape: tall on the phone, wide on the laptop, the tablet as you hold it (it switches when you turn it). New photos are fetched in that shape.
 - The Islamic topic now brings Masjid al-Haram and the Kaaba, the Prophet's Mosque in Medina, and Al-Aqsa with the Dome of the Rock, mixed with other mosques.
