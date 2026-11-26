@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<meta name="focus-build" content="2026-11-26.4">
+<meta name="focus-build" content="2026-11-26.5">
 <meta name="description" content="Focus: a calm timer for meditation and study, with a dhikr counter, wisdom quotes and progress charts.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -139,7 +139,6 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .bg-tile[aria-pressed="true"]{border-color:var(--fg)}
 .bg-tile span{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 7px;font-size:11px;font-weight:500;color:#fff;text-align:start;
   background:linear-gradient(transparent,rgba(0,0,0,.6))}
-.bg-sheet .bg-view{margin-top:16px}
 .bg-tile .heart{position:absolute;top:6px;left:6px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:transform .25s var(--ease)}
 .bg-tile .heart svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
 .bg-tile .heart.on svg{fill:#ff4d6d;stroke:#ff4d6d}
@@ -147,14 +146,27 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 .bg-empty{grid-column:1/-1;color:var(--muted);font-size:13px;margin:8px 0}
 .bg-tile .x{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:12px}
 .bg-sheet{overflow-y:auto}
-.bg-sheet .row2{display:flex;gap:10px;margin-top:12px}
-.bg-sheet .row2 .mini{flex:1}
 .bg-credit{font-size:12px;color:var(--muted);margin:14px 0 24px}
 .bg-grid.wide{grid-template-columns:repeat(2,1fr)}
 .bg-grid.wide .bg-tile{aspect-ratio:16/10}
 .bg-grid.tall .bg-tile{aspect-ratio:9/16}
 .bg-sheet .bg-save{margin-top:14px}
-.bg-topics{justify-content:flex-start;margin-top:14px}
+/* the Background sheet, kept quiet: one sliding row of topics, then the view switch and one button */
+.bg-topics,.bg-bar{flex-shrink:0}
+html[dir=rtl] .bg-topics{-webkit-mask-image:linear-gradient(270deg,#000 88%,transparent)}
+.bg-topics{display:flex;gap:4px;margin:14px -4px 0;padding:2px 4px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.bg-topics::-webkit-scrollbar{display:none}
+.bg-topics button{flex:0 0 auto;height:32px;padding:0 13px;border-radius:999px;border:0;background:none;color:var(--muted);font:500 14px var(--sans);transition:background .25s,color .25s}
+.bg-topics button[aria-pressed="true"]{background:var(--card);color:var(--fg);box-shadow:inset 0 0 0 1px var(--faint)}
+.bg-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+.bg-view{display:flex;padding:3px;border-radius:999px;background:var(--card)}
+.bg-view button{height:30px;padding:0 14px;border-radius:999px;border:0;background:none;color:var(--muted);font:500 13px var(--sans);transition:background .25s,color .25s}
+.bg-view button[aria-pressed="true"]{background:var(--fg);color:var(--pill-fg)}
+.bg-view #bgFavN{opacity:.6}
+.bg-pack{display:flex;align-items:center;gap:7px;height:36px;padding:0 16px 0 13px;border-radius:999px;border:1px solid var(--faint);background:none;color:var(--fg);font:500 13px var(--sans);transition:transform .2s var(--ease),border-color .25s}
+.bg-pack:active{transform:scale(.95)}
+.bg-pack:disabled{opacity:.5}
+.bg-pack svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .lbl-pick{display:flex;align-items:center;gap:12px;background:none;border:0;color:var(--fg);font:500 16px var(--sans);text-align:start;padding:6px 0;cursor:pointer;min-width:0}
 .lbl-pick i{width:12px;height:12px;border-radius:50%;background:var(--c,var(--faint));flex:none}
 .lbl-pick b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

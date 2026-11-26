@@ -1,5 +1,9 @@
 # Changelog
 
+## Web — calmer Background sheet
+- One sliding row of topics, then Saved / Favorites and a single "Download pack" button (New photo removed).
+- Topic names in Arabic.
+
 ## Web — top-rated HD photos, favorites, history folds
 - Back to featured pictures only (Wikimedia's best rated), and only big ones (3000 px and up). The photo is shown at the size that covers your screen pixel for pixel, so it's always sharp; tiles use bigger previews.
 - Islamic: mostly the featured mosques again; hand-picked Mecca, Medina and Al-Aqsa photos come in now and then (one per pack).
