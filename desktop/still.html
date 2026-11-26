@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<meta name="focus-build" content="2026-11-23.3">
+<meta name="focus-build" content="2026-11-26.2">
 <meta name="description" content="Focus: a calm timer for meditation and study, with a dhikr counter, wisdom quotes and progress charts.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -15,7 +15,7 @@
 <title>Focus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@300;400;500;600&display=swap">
 <style>
 /* Layout: one phone-width column on a dot-matrix screen; giant mono numerals, one white pill, three tabs. */
 :root{
@@ -45,6 +45,8 @@ body.theme-light{--bg:#eceae4;--fg:#0b0b0d;--muted:#5d5d63;--faint:#b9b8b2;--lin
 #bg::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(9,9,11,.42),rgba(9,9,11,.62) 55%,rgba(9,9,11,.86))}
 body.theme-light #bg::after{background:linear-gradient(rgba(236,234,228,.5),rgba(236,234,228,.66) 55%,rgba(236,234,228,.88))}
 body.has-bg #bg{opacity:1}
+@supports selector(:has(a)){body.has-bg:has(#run:not([hidden])) #bg::after{background:radial-gradient(ellipse 70% 55% at 50% 45%,rgba(9,9,11,.62),rgba(9,9,11,.82))}
+body.has-bg.theme-light:has(#run:not([hidden])) #bg::after{background:radial-gradient(ellipse 70% 55% at 50% 45%,rgba(236,234,228,.7),rgba(236,234,228,.86))}}
 body.has-bg::before{display:none}
 body.has-bg{background-color:#000}
 body.has-bg.theme-light{background-color:#fff}
@@ -52,7 +54,7 @@ body.has-bg.theme-light{background-color:#fff}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
-body{touch-action:manipulation;-webkit-touch-callout:none;
+body{touch-action:manipulation;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   background-color:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;
   -webkit-font-smoothing:antialiased;overflow:hidden;
 }
@@ -87,25 +89,38 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 #sit.running .label-chip{margin-top:10px}
 @media (max-height:760px){.dial{min-height:220px;gap:18px}}
 @media (max-width:600px){.cap{padding-inline-end:92px}.cap-day{font-size:clamp(26px,7.6vw,34px)}} /* clear of the two corner buttons */
-.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:0;padding-block:8px}
+.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:0;padding-block:8px}
 .ring-wrap{position:relative;width:min(70vw,290px,34vh);aspect-ratio:1}
 .ring{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
-.ring circle{fill:none;stroke-width:5}
+.ring circle{fill:none;stroke-width:3.5}
 .ring .ring-bg{stroke:var(--line)}
 .ring .ring-fg{stroke:var(--c,var(--fg));stroke-linecap:round;stroke-dasharray:100 100;transition:stroke-dashoffset .3s linear,stroke .4s;filter:drop-shadow(0 0 6px var(--glow))}
 .ring-wrap.over .ring-fg{animation:ringPulse 2.4s ease-in-out infinite}
 @keyframes ringPulse{50%{opacity:.45}}
 .ring-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:0 14%}
-.ring-clock{font:500 clamp(36px,min(12vw,7vh),60px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.ring-clock{font:300 clamp(36px,min(12vw,7vh),60px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
 .ring-sub{color:var(--muted);font-size:13px;line-height:1.35}
-.sr-ctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.sr-ctl button{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans);transition:transform .2s var(--ease),border-color .25s}
-.sr-ctl button:active{transform:scale(.95)}
-.sr-ctl button:disabled{opacity:.35;cursor:default}
-.sr-ctl .hold{position:relative;bottom:auto;width:auto;height:40px;padding:0 18px;margin:0;background:transparent}
-.sr-ctl .hold span{mix-blend-mode:normal;transition:color .2s}
-.sr-ctl .hold.on span{color:var(--pill-fg);transition:color .75s steps(1,end)}
-.sr-ctl .hold.tap{background:var(--fg)}
+/* the controls: −5 and +5 as quiet circles, pause / play as the big one in the label's colour; hold it to end */
+.ctl3{display:flex;align-items:center;justify-content:center;gap:30px;direction:ltr} /* −5 left, +5 right in Arabic too */
+.c-side{width:52px;height:52px;border-radius:50%;border:1px solid var(--faint);background:transparent;color:var(--fg);font:300 15px var(--mono);letter-spacing:-.03em;display:grid;place-items:center;transition:transform .3s var(--ease),opacity .4s,border-color .3s}
+.c-side:hover{border-color:var(--muted)}
+.c-side:active{transform:scale(.9)}
+.c-side:disabled{opacity:.22;cursor:default}
+.c-main{position:relative;width:76px;height:76px;border-radius:50%;border:0;background:var(--c,var(--fg));color:var(--pill-fg);display:grid;place-items:center;touch-action:none;transition:transform .35s var(--ease),background-color .5s,box-shadow .5s;box-shadow:0 8px 28px -10px var(--c,var(--glow))}
+.c-main:active{transform:scale(.93)}
+.c-main .ic{grid-area:1/1;width:26px;height:26px;fill:currentColor;transition:opacity .3s var(--ease),transform .4s var(--ease)}
+.c-main .i-play,.c-main .i-done,.c-main.paused .i-pause,.c-main.tap .i-pause{opacity:0;transform:scale(.6) rotate(-30deg)}
+.c-main.paused:not(.tap) .i-play,.c-main.tap .i-done{opacity:1;transform:none}
+.c-main .hring{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.c-main .hring circle{fill:none;stroke:var(--c,var(--fg));stroke-width:2;stroke-linecap:round;stroke-dasharray:100 100;stroke-dashoffset:100;opacity:0;transition:stroke-dashoffset .25s,opacity .25s}
+.c-main.on .hring circle{stroke-dashoffset:0;opacity:1;transition:stroke-dashoffset 1.5s linear,opacity .2s}
+.c-cap{color:var(--muted);font-size:12px;letter-spacing:.01em;text-align:center;min-height:16px;transition:opacity .4s}
+.paused .ring-fg{opacity:.4}
+.paused .ring-clock,.run.paused .clock{animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.45}}
+.run-ctl{position:absolute;bottom:calc(36px + env(safe-area-inset-bottom,0px));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:14px;transition:opacity 1.2s}
+.run > .run-ctl{position:absolute}
+.run.idle .run-ctl{opacity:.12}
 .chip{display:inline-flex;align-items:center;gap:8px}
 .chip i{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted));flex:none}
 /* the label: one small chip at the top left; tap it for the list */
@@ -230,6 +245,8 @@ button.wisdom:hover{border-color:var(--faint)}
 
 /* Dhikr */
 .dz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:340px}
+input,textarea{user-select:text;-webkit-user-select:text} /* an app, not a page: a long press never selects text */
+img,svg{-webkit-user-drag:none;user-drag:none}
 .counter{position:relative;width:min(300px,72vw);max-width:100%;aspect-ratio:1;border:0;border-radius:50%;background:transparent;padding:0;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .counter svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .counter .trk{fill:none;stroke:var(--line);stroke-width:4}
@@ -367,7 +384,7 @@ body.zoomcv .pipview .mini-sub{font-size:11px;padding:0 6px}
   user-select:none;-webkit-user-select:none;
 }
 .run-cap{position:absolute;top:calc(28px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;color:var(--muted);font-size:15px;font-weight:500;transition:opacity 1.2s}
-.clock{font:500 clamp(60px,21vw,128px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums;text-shadow:0 0 30px var(--glow)}
+.clock{font:300 clamp(60px,21vw,128px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums;text-shadow:0 0 30px var(--glow)}
 .clock.small{font-size:clamp(48px,16vw,88px)}
 .run-sub{color:var(--muted);font-size:15px}
 .run-warn{max-width:300px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45;margin:10px 0 0}

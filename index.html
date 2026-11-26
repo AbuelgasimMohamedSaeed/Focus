@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<meta name="focus-build" content="2026-11-23.3">
+<meta name="focus-build" content="2026-11-26.2">
 <meta name="description" content="Focus: a calm timer for meditation and study, with a dhikr counter, wisdom quotes and progress charts.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -15,7 +15,7 @@
 <title>Focus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@300;400;500;600&display=swap">
 <style>
 /* Layout: one phone-width column on a dot-matrix screen; giant mono numerals, one white pill, three tabs. */
 :root{
@@ -45,6 +45,8 @@ body.theme-light{--bg:#eceae4;--fg:#0b0b0d;--muted:#5d5d63;--faint:#b9b8b2;--lin
 #bg::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(9,9,11,.42),rgba(9,9,11,.62) 55%,rgba(9,9,11,.86))}
 body.theme-light #bg::after{background:linear-gradient(rgba(236,234,228,.5),rgba(236,234,228,.66) 55%,rgba(236,234,228,.88))}
 body.has-bg #bg{opacity:1}
+@supports selector(:has(a)){body.has-bg:has(#run:not([hidden])) #bg::after{background:radial-gradient(ellipse 70% 55% at 50% 45%,rgba(9,9,11,.62),rgba(9,9,11,.82))}
+body.has-bg.theme-light:has(#run:not([hidden])) #bg::after{background:radial-gradient(ellipse 70% 55% at 50% 45%,rgba(236,234,228,.7),rgba(236,234,228,.86))}}
 body.has-bg::before{display:none}
 body.has-bg{background-color:#000}
 body.has-bg.theme-light{background-color:#fff}
@@ -52,7 +54,7 @@ body.has-bg.theme-light{background-color:#fff}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
-body{touch-action:manipulation;-webkit-touch-callout:none;
+body{touch-action:manipulation;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
   background-color:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;
   -webkit-font-smoothing:antialiased;overflow:hidden;
 }
@@ -87,25 +89,38 @@ button:focus-visible,.ruler:focus-visible,summary:focus-visible{outline:2px soli
 #sit.running .label-chip{margin-top:10px}
 @media (max-height:760px){.dial{min-height:220px;gap:18px}}
 @media (max-width:600px){.cap{padding-inline-end:92px}.cap-day{font-size:clamp(26px,7.6vw,34px)}} /* clear of the two corner buttons */
-.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:0;padding-block:8px}
+.sit-run{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:0;padding-block:8px}
 .ring-wrap{position:relative;width:min(70vw,290px,34vh);aspect-ratio:1}
 .ring{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
-.ring circle{fill:none;stroke-width:5}
+.ring circle{fill:none;stroke-width:3.5}
 .ring .ring-bg{stroke:var(--line)}
 .ring .ring-fg{stroke:var(--c,var(--fg));stroke-linecap:round;stroke-dasharray:100 100;transition:stroke-dashoffset .3s linear,stroke .4s;filter:drop-shadow(0 0 6px var(--glow))}
 .ring-wrap.over .ring-fg{animation:ringPulse 2.4s ease-in-out infinite}
 @keyframes ringPulse{50%{opacity:.45}}
 .ring-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:0 14%}
-.ring-clock{font:500 clamp(36px,min(12vw,7vh),60px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.ring-clock{font:300 clamp(36px,min(12vw,7vh),60px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
 .ring-sub{color:var(--muted);font-size:13px;line-height:1.35}
-.sr-ctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.sr-ctl button{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--faint);background:var(--card);color:var(--fg);font:500 13px var(--sans);transition:transform .2s var(--ease),border-color .25s}
-.sr-ctl button:active{transform:scale(.95)}
-.sr-ctl button:disabled{opacity:.35;cursor:default}
-.sr-ctl .hold{position:relative;bottom:auto;width:auto;height:40px;padding:0 18px;margin:0;background:transparent}
-.sr-ctl .hold span{mix-blend-mode:normal;transition:color .2s}
-.sr-ctl .hold.on span{color:var(--pill-fg);transition:color .75s steps(1,end)}
-.sr-ctl .hold.tap{background:var(--fg)}
+/* the controls: −5 and +5 as quiet circles, pause / play as the big one in the label's colour; hold it to end */
+.ctl3{display:flex;align-items:center;justify-content:center;gap:30px;direction:ltr} /* −5 left, +5 right in Arabic too */
+.c-side{width:52px;height:52px;border-radius:50%;border:1px solid var(--faint);background:transparent;color:var(--fg);font:300 15px var(--mono);letter-spacing:-.03em;display:grid;place-items:center;transition:transform .3s var(--ease),opacity .4s,border-color .3s}
+.c-side:hover{border-color:var(--muted)}
+.c-side:active{transform:scale(.9)}
+.c-side:disabled{opacity:.22;cursor:default}
+.c-main{position:relative;width:76px;height:76px;border-radius:50%;border:0;background:var(--c,var(--fg));color:var(--pill-fg);display:grid;place-items:center;touch-action:none;transition:transform .35s var(--ease),background-color .5s,box-shadow .5s;box-shadow:0 8px 28px -10px var(--c,var(--glow))}
+.c-main:active{transform:scale(.93)}
+.c-main .ic{grid-area:1/1;width:26px;height:26px;fill:currentColor;transition:opacity .3s var(--ease),transform .4s var(--ease)}
+.c-main .i-play,.c-main .i-done,.c-main.paused .i-pause,.c-main.tap .i-pause{opacity:0;transform:scale(.6) rotate(-30deg)}
+.c-main.paused:not(.tap) .i-play,.c-main.tap .i-done{opacity:1;transform:none}
+.c-main .hring{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.c-main .hring circle{fill:none;stroke:var(--c,var(--fg));stroke-width:2;stroke-linecap:round;stroke-dasharray:100 100;stroke-dashoffset:100;opacity:0;transition:stroke-dashoffset .25s,opacity .25s}
+.c-main.on .hring circle{stroke-dashoffset:0;opacity:1;transition:stroke-dashoffset 1.5s linear,opacity .2s}
+.c-cap{color:var(--muted);font-size:12px;letter-spacing:.01em;text-align:center;min-height:16px;transition:opacity .4s}
+.paused .ring-fg{opacity:.4}
+.paused .ring-clock,.run.paused .clock{animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.45}}
+.run-ctl{position:absolute;bottom:calc(36px + env(safe-area-inset-bottom,0px));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:14px;transition:opacity 1.2s}
+.run > .run-ctl{position:absolute}
+.run.idle .run-ctl{opacity:.12}
 .chip{display:inline-flex;align-items:center;gap:8px}
 .chip i{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted));flex:none}
 /* the label: one small chip at the top left; tap it for the list */
@@ -230,6 +245,8 @@ button.wisdom:hover{border-color:var(--faint)}
 
 /* Dhikr */
 .dz{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;min-height:340px}
+input,textarea{user-select:text;-webkit-user-select:text} /* an app, not a page: a long press never selects text */
+img,svg{-webkit-user-drag:none;user-drag:none}
 .counter{position:relative;width:min(300px,72vw);max-width:100%;aspect-ratio:1;border:0;border-radius:50%;background:transparent;padding:0;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .counter svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 .counter .trk{fill:none;stroke:var(--line);stroke-width:4}
@@ -367,7 +384,7 @@ body.zoomcv .pipview .mini-sub{font-size:11px;padding:0 6px}
   user-select:none;-webkit-user-select:none;
 }
 .run-cap{position:absolute;top:calc(28px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;color:var(--muted);font-size:15px;font-weight:500;transition:opacity 1.2s}
-.clock{font:500 clamp(60px,21vw,128px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums;text-shadow:0 0 30px var(--glow)}
+.clock{font:300 clamp(60px,21vw,128px)/1 var(--mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums;text-shadow:0 0 30px var(--glow)}
 .clock.small{font-size:clamp(48px,16vw,88px)}
 .run-sub{color:var(--muted);font-size:15px}
 .run-warn{max-width:300px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45;margin:10px 0 0}
@@ -612,7 +629,8 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
         <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="54"/><circle class="ring-fg" id="srRing" cx="60" cy="60" r="54" pathLength="100"/></svg>
         <div class="ring-mid"><div class="ring-clock" id="srClock">0:00</div><div class="ring-sub" id="srSub"></div></div>
       </div>
-      <div class="sr-ctl"><button id="srMinus" aria-label="5 minutes less">− 5 min</button><button class="hold" id="srEnd"><i></i><span>Hold to end</span></button><button id="srPlus" aria-label="5 minutes more">+ 5 min</button></div>
+      <div class="ctl3"><button class="c-side" id="srMinus" aria-label="5 minutes less">−5</button><button class="c-main" id="srEnd" aria-label="Pause"><svg class="hring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47" pathLength="100"/></svg><svg class="ic i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2"/></svg><svg class="ic i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.4 0-1.8l-10-6.4C8.9 4.3 8 4.8 8 5.6z"/></svg><svg class="ic i-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="c-side" id="srPlus" aria-label="5 minutes more">+5</button></div>
+      <div class="c-cap" id="srCap"></div>
     </div>
     <div class="start-row">
       <button class="pill" id="startBtn">Start</button>
@@ -897,8 +915,10 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   <div class="clock" id="clock">2:00:00</div>
   <div class="run-sub" id="runSub">of 2:00 hr</div>
   <p class="run-warn" id="runWarn" hidden>This browser can't keep the screen on. Set Auto-Lock to Never while you sit.</p>
-  <div class="adj" id="adj"><button id="minus5" aria-label="5 minutes less">− 5 min</button><button id="plus5" aria-label="5 minutes more">+ 5 min</button></div>
-  <button class="hold" id="holdBtn"><i></i><span>Hold to end</span></button>
+  <div class="run-ctl" id="adj">
+    <div class="ctl3"><button class="c-side" id="minus5" aria-label="5 minutes less">−5</button><button class="c-main" id="holdBtn" aria-label="Pause"><svg class="hring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47" pathLength="100"/></svg><svg class="ic i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2"/></svg><svg class="ic i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.4 0-1.8l-10-6.4C8.9 4.3 8 4.8 8 5.6z"/></svg><svg class="ic i-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="c-side" id="plus5" aria-label="5 minutes more">+5</button></div>
+    <div class="c-cap" id="runCap"></div>
+  </div>
 </div>
 
 <div class="run" id="done" hidden>
@@ -965,7 +985,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     try { color = r && r.label ? labelColor(r.label, false) : ''; } catch (e) {}
     let sound = 'ring';
     try { sound = soundName(); } catch (e) {}
-    const st = r ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over,
+    const st = r && !r.pausedAt ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, label: r.label || '', over: !!r.over,
       color, up: !!r.up, sound: S.muted ? 'off' : sound, interval: S.interval || 0 }) : 'null';
     if (st === lastSit) return;
     lastSit = st;
@@ -1008,7 +1028,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     return out.sort((a, b) => a.start - b.start);
   }
   function runningMin() { // the minutes of the sit that is running now, the same on all your linked devices
-    const r = S.running, now = Date.now();
+    const r = S.running, now = r && r.pausedAt || Date.now();
     if (!r || now < r.startAt) return 0;
     return r.over ? r.planned + extraCounted(r) : Math.floor((now - r.startAt) / 60000);
   }
@@ -1368,12 +1388,28 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   const extraCounted = r => r.over ? Math.floor(Math.max(0, Date.now() - r.endAt) / BLOCK) * 5 : 0;
   function overSub(r) {
     const c = extraCounted(r);
-    return 'Time’s up · ' + (c ? '+' + c + ' min counted' : 'extra counts every 5 min') + ' · tap Done when ready';
+    return 'Time’s up · ' + (c ? '+' + c + ' min counted' : 'extra counts every 5 min');
   }
+  const endsAt = t => { const d = new Date(t), h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); };
   function overUI(on) {
-    const [n, u] = durParts(S.running.planned);
-    $('runSub').textContent = on ? overSub(S.running) : (S.running.up ? 'counting up to ' : 'of ') + n + ' ' + u;
-    [hold, $('srEnd')].forEach(h => { h.classList.toggle('tap', on); h.querySelector('span').textContent = on ? 'Done' : 'Hold to end'; });
+    const r = S.running;
+    if (!r) return;
+    const [n, u] = durParts(r.planned);
+    $('runSub').textContent = r.over ? overSub(r) : r.pausedAt ? 'Paused' : r.up ? 'counting up to ' + n + ' ' + u : 'Ends at ' + endsAt(r.endAt);
+    const paused = !!r.pausedAt && !r.over;
+    [hold, $('srEnd')].forEach(h => { h.classList.toggle('tap', !!r.over); h.classList.toggle('paused', paused); h.setAttribute('aria-label', r.over ? 'Done' : paused ? 'Resume' : 'Pause'); });
+    $('srCap').textContent = $('runCap').textContent = r.over ? 'Tap the check when you’re ready' : paused ? 'Paused · hold to end' : 'Tap to pause · hold to end';
+    $('sitRun').classList.toggle('paused', paused); $('run').classList.toggle('paused', paused);
+  }
+  // pause: the clock, the ring and the bells stop; going on moves the start and the end later by the pause
+  function togglePause() {
+    const r = S.running;
+    if (!r || r.over) return;
+    const now = Date.now();
+    if (r.pausedAt) { const d = Math.max(0, now - r.pausedAt); r.startAt += d; r.endAt += d; delete r.pausedAt; }
+    else r.pausedAt = now;
+    save(); overUI(!!r.over); paintAdj(); tick(); paintMini();
+    if (!$('run').hidden) wake();
   }
   // a running sit shows on the Sit page itself, so Dhikr, Progress and the label stay usable. Deep focus is the
   // full-screen timer; on the other tabs a small bar above the tabs shows the time
@@ -1393,14 +1429,15 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     const r = S.running;
     $('sit').classList.toggle('running', !!r); $('sitRun').hidden = !r;
     if (!r) return;
-    const now = Date.now(), len = r.planned * 60000;
+    const now = r.pausedAt || Date.now(), len = r.planned * 60000;
     let f; // how much of the ring is drawn, 0 to 1
     if (now < r.startAt) f = r.up ? 0 : 1 - (r.startAt - now) / SETTLE; // settling: the ring fills up, then the sit empties it
     else if (r.over) f = 1;
     else f = r.up ? (now - r.startAt) / len : (r.endAt - now) / len;
     $('srRing').style.strokeDashoffset = (100 - Math.max(0, Math.min(1, f)) * 100).toFixed(2);
     const n = (r.label || '').trim();
-    $('srWrap').style.setProperty('--c', n ? labelColor(n, false) : '');
+    const c = n ? labelColor(n, false) : '';
+    $('sitRun').style.setProperty('--c', c); $('run').style.setProperty('--c', c);
     $('srWrap').classList.toggle('over', !!r.over);
     $('srClock').textContent = $('clock').textContent;
     $('srSub').textContent = $('runSub').textContent;
@@ -1452,9 +1489,10 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   function tick0() {
     const r = S.running;
     if (!r) return;
-    const now = Date.now();
-    const late = ANDROID && now - lastTick > 1500; // back from the background, where Android rang the bells itself
-    lastTick = now;
+    const real = Date.now();
+    const late = ANDROID && real - lastTick > 1500; // back from the background, where Android rang the bells itself
+    lastTick = real;
+    const now = r.pausedAt || real; // paused: the time stands still
     if (now < r.startAt) { // 10-second settle
       const sv = fmtClock(Math.ceil((r.startAt - now) / 1000));
       if ($('clock').textContent !== sv) { $('clock').textContent = sv; replay($('clock'), 'pop'); }
@@ -1485,7 +1523,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     S.running = null;
     runMin = true; $('runBar').hidden = true; paintStartBtn(); paintInline();
     liveEnded = r.startAt; // linked devices end it too, without logging it again
-    const elapsed = Math.floor((Date.now() - r.startAt) / 60000);
+    const elapsed = Math.floor(((r.pausedAt || Date.now()) - r.startAt) / 60000);
     const extra = early ? 0 : extraCounted(r);
     const min = early ? elapsed : r.planned + extra;
     if (min >= 1) S.sessions.push(Object.assign({ d: dkey(r.startAt), start: r.startAt, min }, r.label ? { label: r.label } : {}));
@@ -1516,6 +1554,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
       } else { r.planned += 5; r.endAt += 5 * 60000; }
     } else {
       if (r.over || r.planned <= 5) return;
+      if (r.pausedAt && r.endAt - 5 * 60000 <= r.pausedAt) return; // paused: never end the sit while it stands still
       r.planned -= 5; r.endAt -= 5 * 60000; // if that is already past, the bell rings now
     }
     save(); overUI(!!r.over); paintAdj(); tick(); paintMini(); wake();
@@ -1789,6 +1828,8 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
       buzz('goal');
     } else if (c.count > c.goal - 10 && c.count < c.goal) { // the last 10 before the goal: a short tap you can feel
       buzz('tap');
+    } else if (c.count % 100 === 0) { // and one at every hundred, so you can count without looking
+      buzz('tap');
     }
     save(); paintDhikr();
     replay($('dzNum'), 'bump');
@@ -1802,13 +1843,22 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     DZ.lastGoal = n;
     save(); paintDhikr();
   });
-  // the whole screen above the tabs counts while a session is running, except real controls
-  document.addEventListener('click', e => {
-    if ($('dhikr').hidden || !$('run').hidden || !$('done').hidden || !DZ.cur) return;
-    const t = e.target;
-    if (t.closest && t.closest('.tabs, input, form, #fsBtn, .sheet')) return;
-    if (t.closest && t.closest('button') && !t.closest('#counter')) return;
-    countOne(e.clientX || null, e.clientY || null);
+  // the whole screen above the tabs counts while a session is running, except real controls.
+  // It counts when the finger lifts, so a quick tap and a long hold both count exactly one.
+  const dzCounts = t => !($('dhikr').hidden || !$('run').hidden || !$('done').hidden || !DZ.cur) &&
+    !(t.closest && (t.closest('.tabs, input, form, #fsBtn, .sheet') || (t.closest('button') && !t.closest('#counter'))));
+  let dzDown = null;
+  document.addEventListener('pointerdown', e => { dzDown = e.isPrimary && dzCounts(e.target) ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null; });
+  document.addEventListener('pointerup', e => {
+    const d = dzDown; dzDown = null;
+    if (!d || e.pointerId !== d.id || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 40 || !dzCounts(e.target)) return;
+    countOne(e.clientX, e.clientY);
+  });
+  document.addEventListener('pointercancel', () => { dzDown = null; });
+  // a long press anywhere (text, photos, buttons) opens no menu and selects nothing; typing fields still work as usual
+  document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest('input, textarea'))) e.preventDefault(); });
+  document.addEventListener('click', e => { // Enter on the counter (keyboard): no pointer involved
+    if (e.detail === 0 && e.target.closest && e.target.closest('#counter') && dzCounts(e.target)) countOne();
   });
   document.addEventListener('keydown', e => {
     if (e.code !== 'Space' || e.repeat || $('dhikr').hidden || !$('run').hidden || !DZ.cur) return;
@@ -1904,15 +1954,22 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
   $('doneBtn').addEventListener('click', () => { $('done').hidden = true; });
   $('run').addEventListener('pointerdown', wake);
 
-  let holdT;
+  let holdT, holdAt = 0;
   [hold, $('srEnd')].forEach(h => {
     const holdStart = e => {
       e.preventDefault(); if (h === hold) wake();
-      if (S.running && S.running.over) { finish(false); return; }
-      h.classList.add('on');
-      holdT = setTimeout(() => { h.classList.remove('on'); finish(true); }, 1500);
+      if (!S.running || holdAt) return;
+      if (S.running.over) { finish(false); return; }
+      holdAt = Date.now(); h.classList.add('on');
+      holdT = setTimeout(() => { holdAt = 0; h.classList.remove('on'); finish(true); }, 1500);
     };
-    const holdEnd = () => { clearTimeout(holdT); h.classList.remove('on'); };
+    const holdEnd = e => {
+      if (!holdAt) return;
+      clearTimeout(holdT); h.classList.remove('on');
+      const tap = Date.now() - holdAt < 450 && (e.type === 'pointerup' || e.type === 'keyup');
+      holdAt = 0;
+      if (tap) togglePause();
+    };
     h.addEventListener('pointerdown', holdStart);
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => h.addEventListener(t, holdEnd));
     h.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) holdStart(e); });
@@ -2114,7 +2171,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     S.link = { key, name: s }; save();
     return 'ok';
   }
-  const liveSnap = r => r ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, up: !!r.up, label: r.label || '' }) : 'null';
+  const liveSnap = r => r ? JSON.stringify({ startAt: r.startAt, endAt: r.endAt, planned: r.planned, up: !!r.up, label: r.label || '', p: r.pausedAt || r.p || 0 }) : 'null';
   // each linked device keeps its own sits at live/<key>/log/<device>; the others read them all
   let logPushed = '', logES = null, logT = 0;
   function logPush() {
@@ -2147,12 +2204,13 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     if (!st || (!force && st.by === deviceId)) return;
     if (st.sit) {
       if (liveSnap(st.sit) === liveSnap(S.running)) return;
-      const keep = S.running && S.running.startAt === st.sit.startAt ? S.running : null, now = Date.now();
+      const keep = S.running && S.running.startAt === st.sit.startAt ? S.running : null, now = st.sit.p || Date.now();
       liveApplying = true;
       S.running = { startAt: st.sit.startAt, endAt: st.sit.endAt, planned: st.sit.planned, up: !!st.sit.up,
         begun: keep ? keep.begun : now >= st.sit.startAt, over: now >= st.sit.endAt ? (keep ? !!keep.over : true) : false };
       if (keep && keep.iv) S.running.iv = keep.iv;
       if (st.sit.label) S.running.label = st.sit.label;
+      if (st.sit.p) S.running.pausedAt = st.sit.p;
       livePushed = liveSnap(S.running);
       save();
       $('done').hidden = true;
@@ -2326,6 +2384,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     if (m === 'sit') {
       label = S.running.label || 'Sitting'; big = $('clock').textContent; sub = $('runSub').textContent;
       row = (S.running.over ? '' : '<button data-act="minus"' + (S.running.planned <= 5 ? ' disabled' : '') + '>− 5</button>') +
+        (S.running.over ? '' : '<button data-act="pause">' + (S.running.pausedAt ? 'Go on' : 'Pause') + '</button>') +
         '<button data-act="plus">+ 5</button>' + (S.running.over ? '<button class="primary" data-act="done">Done</button>' : '');
     } else if (m === 'dhikr') {
       const c = S.dhikr.cur;
@@ -2448,6 +2507,7 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     else if (a === 'done') finish(false);
     else if (a === 'plus') adjustSit(1);
     else if (a === 'minus') adjustSit(-1);
+    else if (a === 'pause') togglePause();
     paintMini();
   }
   // in the desktop app, Windows itself turns this window into a small always-on-top mini window
@@ -3005,8 +3065,8 @@ html[lang=ar] .seg button,html[lang=ar] .at-meta,html[lang=ar] .label,html[lang=
     location.reload(); // simplest way back to a clean page in the other language
   });
   if (S.lang === 'ar') {
-    const AR = {"Seneca · On the Shortness of Life":"سينيكا · في قِصَر الحياة","Marcus Aurelius · Meditations":"ماركوس أوريليوس · التأملات","Laozi · Tao Te Ching":"لاو تزو · كتاب الطريق والفضيلة","Anne Lamott":"آن لاموت","Jon Kabat-Zinn":"جون كابات زين","Friedrich Nietzsche":"فريدريش نيتشه","Hadith · Bukhari & Muslim":"حديث · البخاري ومسلم","Hadith · Tirmidhi":"حديث · الترمذي","Hadith · Muslim":"حديث · مسلم","Hadith · Bukhari":"حديث · البخاري","English":"English","Deep focus":"تركيز عميق","Laptop":"الحاسوب","Android":"أندرويد","Browser":"متصفح","Device":"جهاز","This device":"هذا الجهاز","Open now":"مفتوح الآن","Sure?":"متأكد؟","Leave deep focus":"الخروج من التركيز العميق","Hide photo":"إخفاء الصورة","Show photo":"إظهار الصورة","Back to the timer":"العودة للمؤقّت","This name is already used by other devices. To add this one, open Focus on one of them: Progress › Leaderboard ›":"هذا الاسم مستخدم على أجهزة أخرى. لإضافة هذا الجهاز، افتح Focus على أحدها: التقدّم › لوحة المتصدّرين ›","Add a device":"أضف جهازًا",", then type the code it shows here.":"، ثم اكتب الرمز الذي يظهر هنا.","Code, like ABCD-EFGH":"الرمز، مثل ABCD-EFGH","Link":"ربط","Your devices with this name share one live timer":"أجهزتك بهذا الاسم تتشارك مؤقّتًا واحدًا مباشرًا","Type this code on your other device":"اكتب هذا الرمز على جهازك الآخر","Start, change or end a sit on any of your linked devices and the others follow. A new device can only use your name with a code from one of them. Everyone using Focus can see the board.":"ابدأ جلسة أو غيّرها أو أنهِها على أي جهاز مربوط وستتبعه الأجهزة الأخرى. لا يستطيع جهاز جديد استخدام اسمك إلا برمز من أحدها. كل مستخدمي Focus يرون اللوحة.","Ended on your other device":"انتهت على جهازك الآخر","That code isn’t right, or it has expired":"الرمز غير صحيح أو انتهت صلاحيته","Only this device so far":"هذا الجهاز فقط حتى الآن","Fajr time":"وقت الفجر","Dhuhr time":"وقت الظهر","Asr time":"وقت العصر","Maghrib time":"وقت المغرب","Isha time":"وقت العشاء","Language":"اللغة","Sit":"جلسة","Dhikr":"ذِكر","Progress":"التقدّم","App Time":"وقت التطبيقات","Focus":"Focus","Start":"ابدأ","Begin":"ابدأ","Cancel":"إلغاء","Done":"تم","Delete":"حذف","Remove":"إزالة","Watch":"راقب","Change":"تغيير","Restore":"استعادة","Set up":"إعداد","Turn on":"تشغيل","turn on":"شغّل","Off":"إيقاف","On":"تشغيل","Not now":"ليس الآن","Open settings":"فتح الإعدادات","Settings":"الإعدادات","Find":"ابحث","Timer":"المؤقّت","Session length":"مدة الجلسة","Timer settings":"إعدادات المؤقّت","Bell, interval and timer":"الجرس والفاصل والمؤقّت","Bell sound":"صوت الجرس","Interval bell":"جرس الفاصل","Timer direction":"اتجاه المؤقّت","Count down":"عدّ تنازلي","Count up from 0":"عدّ تصاعدي من 0","Every 5m":"كل 5 د","Bowl":"وعاء","Ring":"رنين","Hand bell":"جرس يدوي","Temple":"معبد","Tingsha":"تينغشا","Tick":"تكتكة","Silence the sound":"أسكت الصوت","Sound on":"الصوت يعمل","Sound off":"الصوت مغلق","Turn the sound back on":"أعد تشغيل الصوت","Silent: no bells or ticking":"صامت: بلا أجراس ولا تكتكة","5 minutes less":"5 دقائق أقل","5 minutes more":"5 دقائق أكثر","+ 5 min":"+ 5 د","− 5 min":"− 5 د","Scroll or drag the time to change it, 5 minutes per step. You get 10 seconds to settle, then a bell starts your sit.":"مرّر أو اسحب الوقت لتغييره، 5 دقائق في كل خطوة. لديك 10 ثوانٍ لتستقر، ثم يبدأ الجرس جلستك.","Hold to end":"اضغط مطوّلًا للإنهاء","Session complete":"اكتملت الجلسة","Start fresh":"ابدأ من جديد","Get settled · the bell starts your sit":"استقر · الجرس يبدأ جلستك","Ended early · logged":"انتهت مبكرًا · سُجّلت","Ended early · under a minute, not logged":"انتهت مبكرًا · أقل من دقيقة، لم تُسجّل","· tap Done when ready":"· اضغط تم عندما تكون جاهزًا","· counts up":"· عدّ تصاعدي","· scroll to change":"· مرّر للتغيير","extra counts every 5 min":"الإضافي يُحسب كل 5 د","counting up to":"العدّ حتى","min extra":"د إضافية","Mini window":"نافذة صغيرة","Mini window, stays on top":"نافذة صغيرة تبقى في الأعلى","Full screen":"ملء الشاشة","Full screen (or double-click the background)":"ملء الشاشة (أو انقر مرتين على الخلفية)","Exit full screen":"الخروج من ملء الشاشة","Exit full screen (Esc)":"الخروج من ملء الشاشة (Esc)","Back to full view":"العودة للعرض الكامل","This browser can't keep the screen on. Set Auto-Lock to Never while you sit.":"هذا المتصفح لا يُبقي الشاشة مضاءة. اضبط القفل التلقائي على أبدًا أثناء الجلسة.","This browser can’t make a mini window. Update Chrome or Edge.":"هذا المتصفح لا يدعم النافذة الصغيرة. حدّث Chrome أو Edge.","Label":"التصنيف","Labels":"التصنيفات","Add a label":"أضف تصنيفًا","Add label":"أضف تصنيفًا","Label color":"لون التصنيف","New label name":"اسم تصنيف جديد","New label, e.g. Study":"تصنيف جديد، مثل دراسة","Study":"دراسة","Work":"عمل","Reading":"قراءة","Show another wisdom":"حكمة أخرى","Tap for another":"اضغط لأخرى","Wherever you go, there you are.":"أينما ذهبت، فأنت هناك.","It is not that we have a short time to live, but that we waste a lot of it.":"ليس لأن وقتنا في الحياة قصير، بل لأننا نضيع الكثير منه.","A journey of a thousand miles begins with a single step.":"رحلة الألف ميل تبدأ بخطوة واحدة.","Almost everything will work again if you unplug it for a few minutes, including you.":"كل شيء تقريبًا يعود للعمل إذا فصلته بضع دقائق، وأنت كذلك.","He who has a why to live can bear almost any how.":"من يملك سببًا ليعيش يستطيع أن يتحمّل أي كيف تقريبًا.","The best time to plant a tree was twenty years ago. The second best time is now.":"أفضل وقت لزراعة شجرة كان قبل عشرين عامًا، وثاني أفضل وقت هو الآن.","Do every act of your life as though it were the very last act of your life.":"افعل كل عمل في حياتك كأنه آخر عمل فيها.","The impediment to action advances action. What stands in the way becomes the way.":"ما يعيق الفعل يدفعه. وما يقف في الطريق يصبح هو الطريق.","Arabic proverb":"مثل عربي","Proverb":"مثل","al-Hasan al-Basri":"الحسن البصري","Imam al-Shafi‘i":"الإمام الشافعي","Dhikr history":"سجل الذِّكر","History":"السجل","Count one":"عُدّ واحدة","Goal":"الهدف","Your goal":"هدفك","Type how many you want to count, then press Begin.":"اكتب العدد الذي تريده، ثم اضغط ابدأ.","Type a number from 1 to 100,000.":"اكتب رقمًا من 1 إلى 100,000.","· tap anywhere to count":"· اضغط في أي مكان للعدّ","· click anywhere to count":"· انقر في أي مكان للعدّ","Goal reached · keep going or Start fresh":"بلغت الهدف · استمر أو ابدأ من جديد","Tap again to save and start fresh":"اضغط مجددًا للحفظ والبدء من جديد","No sessions yet. Each time you press Start fresh, the session is saved here.":"لا جلسات بعد. كلما ضغطت ابدأ من جديد تُحفظ الجلسة هنا.","My progress":"تقدّمي","Leaderboard":"لوحة المتصدّرين","Progress view":"عرض التقدّم","Daily minutes":"الدقائق اليومية","Minutes each day, last 14 days":"الدقائق كل يوم، آخر 14 يومًا","Last 14 days":"آخر 14 يومًا","last 14 days":"آخر 14 يومًا","Total time":"الوقت الكلي","Total time, last 30 days":"الوقت الكلي، آخر 30 يومًا","Last 30 days":"آخر 30 يومًا","Daily goal":"الهدف اليومي","Goal met":"تحقّق الهدف","Under goal":"دون الهدف","Current streak":"السلسلة الحالية","Best streak":"أفضل سلسلة","Daily average":"المتوسط اليومي","Today":"اليوم","Finish a sit to see your minutes":"أنهِ جلسة لترى دقائقك","Your total grows here with every sit":"يكبر مجموعك هنا مع كل جلسة","No sits yet. Each one you finish shows up here.":"لا جلسات بعد. كل جلسة تنهيها تظهر هنا.","History cleared. Your total time still counts every sit.":"مُسح السجل. وقتك الكلي ما زال يحسب كل جلسة.","Tap again to delete":"اضغط مجددًا للحذف","no streak yet":"لا سلسلة بعد","Theme":"المظهر","Dark or light":"داكن أو فاتح","Dark":"داكن","Light":"فاتح","Background":"الخلفية","Plain":"سادة","Language":"اللغة","English or Arabic":"الإنجليزية أو العربية","Backup":"النسخ الاحتياطي","Save backup file":"احفظ ملف نسخة","Restore from file":"استعد من ملف","Replace my progress":"استبدل تقدّمي","Your progress lives on this device only.":"تقدّمك محفوظ على هذا الجهاز فقط.","Your progress lives on this laptop only. Save a backup file every week or so.":"تقدّمك محفوظ على هذا الحاسوب فقط. احفظ نسخة كل أسبوع تقريبًا.","Backed up automatically to Download › Focus backups (last 30 days kept).":"يُنسخ تلقائيًا إلى التنزيلات › Focus backups (تُحفظ آخر 30 يومًا).","Restore cancelled. Nothing changed.":"أُلغيت الاستعادة. لم يتغيّر شيء.","Found your backup":"وُجدت نسختك الاحتياطية","Backup saved to Download › Focus backups.":"حُفظت النسخة في التنزيلات › Focus backups.","That file isn’t a Focus backup. Choose a file named focus-backup-….json (older still-backup files work too).":"هذا الملف ليس نسخة من Focus. اختر ملفًا باسم focus-backup-….json.","App Time page":"صفحة وقت التطبيقات","See how long you spend in your apps":"اعرف كم تقضي في تطبيقاتك","Line at the top of the screen":"خط أعلى الشاشة","Needs Accessibility to draw over the status bar":"يحتاج إمكانية الوصول ليُرسم فوق شريط الحالة","On · shows your time left over other apps":"يعمل · يُظهر وقتك المتبقي فوق التطبيقات الأخرى","Needs \"Display over other apps\"":"يحتاج «الظهور فوق التطبيقات الأخرى»","Shows your time left over other apps":"يُظهر وقتك المتبقي فوق التطبيقات الأخرى","Shows your time left on the home screen and the apps you watch":"يُظهر وقتك المتبقي على الشاشة الرئيسية والتطبيقات التي تراقبها","Needs Accessibility to see which app is open":"يحتاج إمكانية الوصول ليعرف التطبيق المفتوح","Focus only acts on these apps. Banking and every app you don't add are left alone.":"لا يعمل Focus إلا على هذه التطبيقات. تطبيقات البنوك وكل ما لا تضيفه لا يقترب منها.","Photo topic":"موضوع الصورة","New photo":"صورة جديدة","Download 8":"نزّل 8","Getting photos…":"جارٍ جلب الصور…","Connect to the internet for new photos":"اتصل بالإنترنت لصور جديدة","Could not reach the photo libraries, try again":"تعذّر الوصول لمكتبات الصور، حاول مجددًا","Pick a topic, then get one photo or download a pack of 8. Downloaded photos stay on this device and work offline.":"اختر موضوعًا، ثم اجلب صورة أو نزّل حزمة من 8. الصور المنزّلة تبقى على الجهاز وتعمل دون إنترنت.","nature":"طبيعة","animals":"حيوانات","birds":"طيور","flowers":"زهور","sea":"بحر","night":"ليل","forest":"غابة","islamic":"إسلامية","Islamic":"إسلامية","Who focuses more?":"من يركّز أكثر؟","Your name":"اسمك","For example Gasim":"مثلًا قاسم","Join the leaderboard":"انضم للوحة المتصدّرين","Everyone who uses Focus, ranked by focus time. Only your name and your daily focus minutes are shown, nothing else. Type the same name on all your devices and they add up as one.":"كل مستخدمي Focus مرتّبين حسب وقت التركيز. يظهر اسمك ودقائق تركيزك اليومية فقط، لا شيء غيرها. اكتب الاسم نفسه على كل أجهزتك لتُجمع كشخص واحد.","This week":"هذا الأسبوع","This month":"هذا الشهر","Range":"المدى","You":"أنت","you":"أنت","Same name on each of your devices":"الاسم نفسه على كل أجهزتك","Everyone using Focus can see this board. Same name = same person, so pick one nobody else uses.":"كل مستخدمي Focus يرون هذه اللوحة. الاسم نفسه = الشخص نفسه، فاختر اسمًا لا يستخدمه غيرك.","Leave the leaderboard":"غادر لوحة المتصدّرين","Tap again to leave":"اضغط مجددًا للمغادرة","no streak":"لا سلسلة","Loading the board…":"جارٍ تحميل اللوحة…","Can’t reach the board. Check your internet.":"تعذّر الوصول للوحة. تحقّق من الإنترنت.","Just you so far. Tell your friend to join with his name.":"أنت وحدك حتى الآن. اطلب من صديقك الانضمام باسمه.","Type your name first":"اكتب اسمك أولًا","The leaderboard isn’t connected yet":"لوحة المتصدّرين غير متصلة بعد","Needs one permission first":"يحتاج إذنًا واحدًا أولًا","Let Focus see your app time":"اسمح لـ Focus برؤية وقت تطبيقاتك","Tap":"اضغط",", tap":"، اضغط","in the list and tap it.":"في القائمة واضغط عليه.","Permit usage access":"السماح بالوصول للاستخدام",", then come back.":"، ثم عُد.","Your app time stays on this device. Focus only reads which apps were open and for how long.":"وقت تطبيقاتك يبقى على هذا الجهاز. يقرأ Focus فقط أي التطبيقات فُتحت وكم من الوقت.","Limits need Accessibility":"الحدود تحتاج إمكانية الوصول","Without it, Focus can't notice when you open an app whose time is up, so nothing gets blocked.":"بدونها لا يلاحظ Focus فتحك لتطبيق انتهى وقته، فلا يُحظر شيء.","Watching":"تحت المراقبة","Tap an app to give it a daily limit or open hours.":"اضغط على تطبيق لتضع له حدًا يوميًا أو ساعات فتح.","Add an app to watch":"أضف تطبيقًا للمراقبة","Everything else today":"كل ما سواها اليوم","Nothing else used today.":"لم يُستخدم شيء آخر اليوم.","Apps to watch":"تطبيقات للمراقبة","Search apps":"ابحث في التطبيقات","No app matches.":"لا تطبيق مطابق.","Watching ":"تحت المراقبة","Track only":"تتبّع فقط","No limits and nothing blocked, just the numbers":"بلا حدود ولا حظر، الأرقام فقط","When an app's time is up":"عندما ينتهي وقت تطبيق","Unlock 5 more minutes":"افتح 5 دقائق إضافية","What it takes to get a little more time":"ما يلزم للحصول على وقت إضافي قليل","Not allowed":"غير مسموح","Wait 30 s":"انتظر 30 ث","Type a sentence":"اكتب جملة","Emergency unlocks":"فتح الطوارئ","15 minutes, no questions, a few per week":"15 دقيقة دون أسئلة، مرات قليلة في الأسبوع","1 a week":"1 أسبوعيًا","Break before reopening":"استراحة قبل إعادة الفتح","After you leave a limited app, it stays closed for a while":"بعد مغادرتك تطبيقًا محدودًا يبقى مغلقًا لفترة","Delay before loosening":"تأخير قبل التخفيف","Turning limits down or off only takes effect after this":"تخفيف الحدود أو إيقافها لا يسري إلا بعد هذا","Shrink limits every week":"صغّر الحدود كل أسبوع","Each limit gets a little smaller every 7 days, never below 10 minutes":"يصغر كل حد قليلًا كل 7 أيام، ولا يقل عن 10 دقائق","Quiet times":"أوقات الهدوء","Closes every app you watch.":"يغلق كل تطبيق تراقبه.","Bedtime":"وقت النوم","Watched apps stay closed overnight":"تبقى التطبيقات المراقبة مغلقة ليلًا","Bedtime starts":"يبدأ وقت النوم","Bedtime ends":"ينتهي وقت النوم","to":"إلى","Websites":"المواقع","Closed in every browser, so the app (with its limits) is the only way in.":"مغلقة في كل متصفح، فيبقى التطبيق (بحدوده) الطريق الوحيد.","Block Facebook website":"احظر موقع فيسبوك","Block Instagram website":"احظر موقع إنستغرام","Block TikTok website":"احظر موقع تيك توك","Gray screen":"شاشة رمادية","One-time setup from your laptop":"إعداد لمرة واحدة من حاسوبك","On the phone:":"على الهاتف:","Settings → About phone":"الإعدادات ← حول الهاتف","7 times. Then in":"7 مرات. ثم في","OS version":"إصدار النظام","Additional settings → Developer options":"إعدادات إضافية ← خيارات المطوّر","USB debugging":"تصحيح USB","and":"و","USB debugging (Security settings)":"تصحيح USB (إعدادات الأمان)","Plug the phone into the laptop and allow it when the phone asks.":"صِل الهاتف بالحاسوب واسمح عندما يسأل الهاتف.","On the laptop, double-click":"على الحاسوب، انقر مرتين على","Gray screen setup":"إعداد الشاشة الرمادية","in the Focus folder on your Desktop.":"في مجلد Focus على سطح المكتب.","Android only lets a computer give this permission. You can turn USB debugging off again afterwards.":"أندرويد لا يمنح هذا الإذن إلا من حاسوب. يمكنك إيقاف تصحيح USB بعدها.","At bedtime":"وقت النوم","The apps you watch turn black and white":"تصبح التطبيقات التي تراقبها بالأبيض والأسود","Gray starts":"يبدأ الرمادي","Gray ends":"ينتهي الرمادي","After half a limit":"بعد نصف الحد","Gray while you're in an app that has used half its time today":"رمادي أثناء استخدامك تطبيقًا استهلك نصف وقته اليوم","Gray screen at bedtime":"شاشة رمادية وقت النوم","Gray screen after half a limit":"شاشة رمادية بعد نصف الحد","Reports":"التقارير","Nightly summary":"الملخص الليلي","One quiet notification: today's time, limits kept, time saved":"إشعار هادئ واحد: وقت اليوم، والحدود الملتزم بها، والوقت الموفّر","At":"الساعة","Summary time":"وقت الملخص","Prayer":"الصلاة","Prayer reminder":"تذكير الصلاة","At each adhan, the apps you watch stop until you tap “I understand”":"عند كل أذان تتوقف التطبيقات التي تراقبها حتى تضغط «فهمت»","Not matching your mosque? Change a time and Focus keeps that difference every day.":"لا يطابق مسجدك؟ غيّر الوقت وسيحفظ Focus الفرق كل يوم.","Use my location":"استخدم موقعي","Update my location":"حدّث موقعي","Calculated":"محسوب","That is over 2 hours from the calculated time":"هذا يبعد أكثر من ساعتين عن الوقت المحسوب","Daily limit":"الحد اليومي","When the time is up, the app shows a block screen until tomorrow.":"عند انتهاء الوقت يُظهر التطبيق شاشة حظر حتى الغد.","No limit":"بلا حد","Open only at":"يُفتح فقط في","Outside these hours the app stays closed. No hours set means any time.":"خارج هذه الساعات يبقى التطبيق مغلقًا. بلا ساعات يعني أي وقت.","Add hours":"أضف ساعات","Opens":"يفتح","Closes":"يغلق","Remove these hours":"احذف هذه الساعات","saved in the last 7 days, against your usual use":"وفّرتها في آخر 7 أيام مقارنة باستخدامك المعتاد","Time saved shows once Focus knows your usual use":"يظهر الوقت الموفّر بعدما يعرف Focus استخدامك المعتاد","in a row inside all your limits":"متتالية ضمن كل حدودك","Set a limit to start a streak":"ضع حدًا لتبدأ سلسلة","On all apps · pick the ones to watch":"على كل التطبيقات · اختر ما تراقبه","time's up":"انتهى الوقت"};
-    const PAT = [[/^Today (\S.*?) · (\d+) days? streak$/,"اليوم $1 · سلسلة $2 يوم"],[/^Today (\d+) counted · (\d+) sessions?$/,"اليوم $1 عدّة · $2 جلسة"],[/^Today ([\dhm ]+)$/,"اليوم $1"],[/^([\dhm ]+) focused$/,"$1 تركيز"],[/^([\dhm ]+) watched$/,"$1 مراقَب"],[/^([\dhm ]+) today$/,"$1 اليوم"],[/^Today · (\d+) opens? · ([\dhm ]+) on all apps$/,"اليوم · $1 فتح · $2 على كل التطبيقات"],[/^([\dhm ]+) of ([\dhm ]+) · time's up · (\d+) opens?(.*)$/,"$1 من $2 · انتهى الوقت · $3 فتح$4"],[/^([\dhm ]+) of ([\dhm ]+) · (\d+) opens?(.*)$/,"$1 من $2 · $3 فتح$4"],[/^([\dhm ]+) · (\d+) opens?(.*)$/,"$1 · $2 فتح$3"],[/^(\d+) days? in a row$/,"$1 يوم متتالٍ"],[/^(\d+) days?$/,"$1 يوم"],[/^(\d+) min$/,"$1 د"],[/^(\d+) min counted$/,"$1 د محسوبة"],[/^Your looser settings take effect at (.+)\.$/,"تسري إعداداتك الأخف الساعة $1."],[/^Updated (.+)$/,"آخر تحديث $1"],[/^Offline · last updated (.+)$/,"دون اتصال · آخر تحديث $1"],[/^Last 7 days: (.+?), (.+?) less than the week before(.*)\.$/,"آخر 7 أيام: $1، أقل بـ $2 من الأسبوع الذي قبله$3."],[/^Last 7 days: (.+?), (.+?) more than the week before(.*)\.$/,"آخر 7 أيام: $1، أكثر بـ $2 من الأسبوع الذي قبله$3."],[/^Last 7 days: (.+?), the same as the week before\.$/,"آخر 7 أيام: $1، مثل الأسبوع الذي قبله."],[/^Last 7 days: (.+?) on watched apps\.$/,"آخر 7 أيام: $1 على التطبيقات المراقبة."],[/^After weekly shrinking, it is (.+) a day now\.$/,"بعد التصغير الأسبوعي أصبح $1 يوميًا."],[/^Yours · ([+−]\d+) min$/,"وقتك · $1 د"],[/^Your location, near (.+)$/,"موقعك، قرب $1"],[/^(.+) \(from your time zone; allow location for exact times\)$/,"$1 (حسب منطقتك الزمنية؛ اسمح بالموقع لأوقات أدق)"],[/^(?:Fajr|Dhuhr|Asr|Maghrib|Isha) · (.+)$/,"$1"],[/^(\d+) photos downloaded\. They work offline now\.$/,"نُزّلت $1 صور. تعمل الآن دون إنترنت."],[/^Session complete · (.+)$/,"اكتملت الجلسة · $1"],[/^Goal (.+) reached · total (.+)$/,"بلغت الهدف $1 · المجموع $2"],[/^Backup saved as (.+)$/,"حُفظت النسخة باسم $1"],[/^of (.+)$/,"من $1"],[/^(\d+) devices linked · one live timer$/,"$1 أجهزة مربوطة · مؤقّت واحد مباشر"],[/^Works once, for (\d+:\d\d) more$/,"يعمل مرة واحدة، لمدة $1 أخرى"],[/^Seen (\d+) min ago$/,"قبل $1 د"],[/^Seen (\d+) h ago$/,"قبل $1 س"],[/^Seen (\d+) days ago$/,"قبل $1 يوم"]];
+    const AR = {"Seneca · On the Shortness of Life":"سينيكا · في قِصَر الحياة","Marcus Aurelius · Meditations":"ماركوس أوريليوس · التأملات","Laozi · Tao Te Ching":"لاو تزو · كتاب الطريق والفضيلة","Anne Lamott":"آن لاموت","Jon Kabat-Zinn":"جون كابات زين","Friedrich Nietzsche":"فريدريش نيتشه","Hadith · Bukhari & Muslim":"حديث · البخاري ومسلم","Hadith · Tirmidhi":"حديث · الترمذي","Hadith · Muslim":"حديث · مسلم","Hadith · Bukhari":"حديث · البخاري","English":"English","Deep focus":"تركيز عميق","Paused":"متوقّف مؤقتًا","Pause":"إيقاف مؤقت","Resume":"متابعة","Go on":"تابع","Tap to pause · hold to end":"اضغط للإيقاف المؤقت · اضغط مطوّلًا للإنهاء","Paused · hold to end":"متوقّف مؤقتًا · اضغط مطوّلًا للإنهاء","Tap the check when you’re ready":"اضغط علامة الصح عندما تكون جاهزًا","Laptop":"الحاسوب","Android":"أندرويد","Browser":"متصفح","Device":"جهاز","This device":"هذا الجهاز","Open now":"مفتوح الآن","Sure?":"متأكد؟","Leave deep focus":"الخروج من التركيز العميق","Hide photo":"إخفاء الصورة","Show photo":"إظهار الصورة","Back to the timer":"العودة للمؤقّت","This name is already used by other devices. To add this one, open Focus on one of them: Progress › Leaderboard ›":"هذا الاسم مستخدم على أجهزة أخرى. لإضافة هذا الجهاز، افتح Focus على أحدها: التقدّم › لوحة المتصدّرين ›","Add a device":"أضف جهازًا",", then type the code it shows here.":"، ثم اكتب الرمز الذي يظهر هنا.","Code, like ABCD-EFGH":"الرمز، مثل ABCD-EFGH","Link":"ربط","Your devices with this name share one live timer":"أجهزتك بهذا الاسم تتشارك مؤقّتًا واحدًا مباشرًا","Type this code on your other device":"اكتب هذا الرمز على جهازك الآخر","Start, change or end a sit on any of your linked devices and the others follow. A new device can only use your name with a code from one of them. Everyone using Focus can see the board.":"ابدأ جلسة أو غيّرها أو أنهِها على أي جهاز مربوط وستتبعه الأجهزة الأخرى. لا يستطيع جهاز جديد استخدام اسمك إلا برمز من أحدها. كل مستخدمي Focus يرون اللوحة.","Ended on your other device":"انتهت على جهازك الآخر","That code isn’t right, or it has expired":"الرمز غير صحيح أو انتهت صلاحيته","Only this device so far":"هذا الجهاز فقط حتى الآن","Fajr time":"وقت الفجر","Dhuhr time":"وقت الظهر","Asr time":"وقت العصر","Maghrib time":"وقت المغرب","Isha time":"وقت العشاء","Language":"اللغة","Sit":"جلسة","Dhikr":"ذِكر","Progress":"التقدّم","App Time":"وقت التطبيقات","Focus":"Focus","Start":"ابدأ","Begin":"ابدأ","Cancel":"إلغاء","Done":"تم","Delete":"حذف","Remove":"إزالة","Watch":"راقب","Change":"تغيير","Restore":"استعادة","Set up":"إعداد","Turn on":"تشغيل","turn on":"شغّل","Off":"إيقاف","On":"تشغيل","Not now":"ليس الآن","Open settings":"فتح الإعدادات","Settings":"الإعدادات","Find":"ابحث","Timer":"المؤقّت","Session length":"مدة الجلسة","Timer settings":"إعدادات المؤقّت","Bell, interval and timer":"الجرس والفاصل والمؤقّت","Bell sound":"صوت الجرس","Interval bell":"جرس الفاصل","Timer direction":"اتجاه المؤقّت","Count down":"عدّ تنازلي","Count up from 0":"عدّ تصاعدي من 0","Every 5m":"كل 5 د","Bowl":"وعاء","Ring":"رنين","Hand bell":"جرس يدوي","Temple":"معبد","Tingsha":"تينغشا","Tick":"تكتكة","Silence the sound":"أسكت الصوت","Sound on":"الصوت يعمل","Sound off":"الصوت مغلق","Turn the sound back on":"أعد تشغيل الصوت","Silent: no bells or ticking":"صامت: بلا أجراس ولا تكتكة","5 minutes less":"5 دقائق أقل","5 minutes more":"5 دقائق أكثر","+ 5 min":"+ 5 د","− 5 min":"− 5 د","Scroll or drag the time to change it, 5 minutes per step. You get 10 seconds to settle, then a bell starts your sit.":"مرّر أو اسحب الوقت لتغييره، 5 دقائق في كل خطوة. لديك 10 ثوانٍ لتستقر، ثم يبدأ الجرس جلستك.","Hold to end":"اضغط مطوّلًا للإنهاء","Session complete":"اكتملت الجلسة","Start fresh":"ابدأ من جديد","Get settled · the bell starts your sit":"استقر · الجرس يبدأ جلستك","Ended early · logged":"انتهت مبكرًا · سُجّلت","Ended early · under a minute, not logged":"انتهت مبكرًا · أقل من دقيقة، لم تُسجّل","· tap Done when ready":"· اضغط تم عندما تكون جاهزًا","· counts up":"· عدّ تصاعدي","· scroll to change":"· مرّر للتغيير","extra counts every 5 min":"الإضافي يُحسب كل 5 د","counting up to":"العدّ حتى","min extra":"د إضافية","Mini window":"نافذة صغيرة","Mini window, stays on top":"نافذة صغيرة تبقى في الأعلى","Full screen":"ملء الشاشة","Full screen (or double-click the background)":"ملء الشاشة (أو انقر مرتين على الخلفية)","Exit full screen":"الخروج من ملء الشاشة","Exit full screen (Esc)":"الخروج من ملء الشاشة (Esc)","Back to full view":"العودة للعرض الكامل","This browser can't keep the screen on. Set Auto-Lock to Never while you sit.":"هذا المتصفح لا يُبقي الشاشة مضاءة. اضبط القفل التلقائي على أبدًا أثناء الجلسة.","This browser can’t make a mini window. Update Chrome or Edge.":"هذا المتصفح لا يدعم النافذة الصغيرة. حدّث Chrome أو Edge.","Label":"التصنيف","Labels":"التصنيفات","Add a label":"أضف تصنيفًا","Add label":"أضف تصنيفًا","Label color":"لون التصنيف","New label name":"اسم تصنيف جديد","New label, e.g. Study":"تصنيف جديد، مثل دراسة","Study":"دراسة","Work":"عمل","Reading":"قراءة","Show another wisdom":"حكمة أخرى","Tap for another":"اضغط لأخرى","Wherever you go, there you are.":"أينما ذهبت، فأنت هناك.","It is not that we have a short time to live, but that we waste a lot of it.":"ليس لأن وقتنا في الحياة قصير، بل لأننا نضيع الكثير منه.","A journey of a thousand miles begins with a single step.":"رحلة الألف ميل تبدأ بخطوة واحدة.","Almost everything will work again if you unplug it for a few minutes, including you.":"كل شيء تقريبًا يعود للعمل إذا فصلته بضع دقائق، وأنت كذلك.","He who has a why to live can bear almost any how.":"من يملك سببًا ليعيش يستطيع أن يتحمّل أي كيف تقريبًا.","The best time to plant a tree was twenty years ago. The second best time is now.":"أفضل وقت لزراعة شجرة كان قبل عشرين عامًا، وثاني أفضل وقت هو الآن.","Do every act of your life as though it were the very last act of your life.":"افعل كل عمل في حياتك كأنه آخر عمل فيها.","The impediment to action advances action. What stands in the way becomes the way.":"ما يعيق الفعل يدفعه. وما يقف في الطريق يصبح هو الطريق.","Arabic proverb":"مثل عربي","Proverb":"مثل","al-Hasan al-Basri":"الحسن البصري","Imam al-Shafi‘i":"الإمام الشافعي","Dhikr history":"سجل الذِّكر","History":"السجل","Count one":"عُدّ واحدة","Goal":"الهدف","Your goal":"هدفك","Type how many you want to count, then press Begin.":"اكتب العدد الذي تريده، ثم اضغط ابدأ.","Type a number from 1 to 100,000.":"اكتب رقمًا من 1 إلى 100,000.","· tap anywhere to count":"· اضغط في أي مكان للعدّ","· click anywhere to count":"· انقر في أي مكان للعدّ","Goal reached · keep going or Start fresh":"بلغت الهدف · استمر أو ابدأ من جديد","Tap again to save and start fresh":"اضغط مجددًا للحفظ والبدء من جديد","No sessions yet. Each time you press Start fresh, the session is saved here.":"لا جلسات بعد. كلما ضغطت ابدأ من جديد تُحفظ الجلسة هنا.","My progress":"تقدّمي","Leaderboard":"لوحة المتصدّرين","Progress view":"عرض التقدّم","Daily minutes":"الدقائق اليومية","Minutes each day, last 14 days":"الدقائق كل يوم، آخر 14 يومًا","Last 14 days":"آخر 14 يومًا","last 14 days":"آخر 14 يومًا","Total time":"الوقت الكلي","Total time, last 30 days":"الوقت الكلي، آخر 30 يومًا","Last 30 days":"آخر 30 يومًا","Daily goal":"الهدف اليومي","Goal met":"تحقّق الهدف","Under goal":"دون الهدف","Current streak":"السلسلة الحالية","Best streak":"أفضل سلسلة","Daily average":"المتوسط اليومي","Today":"اليوم","Finish a sit to see your minutes":"أنهِ جلسة لترى دقائقك","Your total grows here with every sit":"يكبر مجموعك هنا مع كل جلسة","No sits yet. Each one you finish shows up here.":"لا جلسات بعد. كل جلسة تنهيها تظهر هنا.","History cleared. Your total time still counts every sit.":"مُسح السجل. وقتك الكلي ما زال يحسب كل جلسة.","Tap again to delete":"اضغط مجددًا للحذف","no streak yet":"لا سلسلة بعد","Theme":"المظهر","Dark or light":"داكن أو فاتح","Dark":"داكن","Light":"فاتح","Background":"الخلفية","Plain":"سادة","Language":"اللغة","English or Arabic":"الإنجليزية أو العربية","Backup":"النسخ الاحتياطي","Save backup file":"احفظ ملف نسخة","Restore from file":"استعد من ملف","Replace my progress":"استبدل تقدّمي","Your progress lives on this device only.":"تقدّمك محفوظ على هذا الجهاز فقط.","Your progress lives on this laptop only. Save a backup file every week or so.":"تقدّمك محفوظ على هذا الحاسوب فقط. احفظ نسخة كل أسبوع تقريبًا.","Backed up automatically to Download › Focus backups (last 30 days kept).":"يُنسخ تلقائيًا إلى التنزيلات › Focus backups (تُحفظ آخر 30 يومًا).","Restore cancelled. Nothing changed.":"أُلغيت الاستعادة. لم يتغيّر شيء.","Found your backup":"وُجدت نسختك الاحتياطية","Backup saved to Download › Focus backups.":"حُفظت النسخة في التنزيلات › Focus backups.","That file isn’t a Focus backup. Choose a file named focus-backup-….json (older still-backup files work too).":"هذا الملف ليس نسخة من Focus. اختر ملفًا باسم focus-backup-….json.","App Time page":"صفحة وقت التطبيقات","See how long you spend in your apps":"اعرف كم تقضي في تطبيقاتك","Line at the top of the screen":"خط أعلى الشاشة","Needs Accessibility to draw over the status bar":"يحتاج إمكانية الوصول ليُرسم فوق شريط الحالة","On · shows your time left over other apps":"يعمل · يُظهر وقتك المتبقي فوق التطبيقات الأخرى","Needs \"Display over other apps\"":"يحتاج «الظهور فوق التطبيقات الأخرى»","Shows your time left over other apps":"يُظهر وقتك المتبقي فوق التطبيقات الأخرى","Shows your time left on the home screen and the apps you watch":"يُظهر وقتك المتبقي على الشاشة الرئيسية والتطبيقات التي تراقبها","Needs Accessibility to see which app is open":"يحتاج إمكانية الوصول ليعرف التطبيق المفتوح","Focus only acts on these apps. Banking and every app you don't add are left alone.":"لا يعمل Focus إلا على هذه التطبيقات. تطبيقات البنوك وكل ما لا تضيفه لا يقترب منها.","Photo topic":"موضوع الصورة","New photo":"صورة جديدة","Download 8":"نزّل 8","Getting photos…":"جارٍ جلب الصور…","Connect to the internet for new photos":"اتصل بالإنترنت لصور جديدة","Could not reach the photo libraries, try again":"تعذّر الوصول لمكتبات الصور، حاول مجددًا","Pick a topic, then get one photo or download a pack of 8. Downloaded photos stay on this device and work offline.":"اختر موضوعًا، ثم اجلب صورة أو نزّل حزمة من 8. الصور المنزّلة تبقى على الجهاز وتعمل دون إنترنت.","nature":"طبيعة","animals":"حيوانات","birds":"طيور","flowers":"زهور","sea":"بحر","night":"ليل","forest":"غابة","islamic":"إسلامية","Islamic":"إسلامية","Who focuses more?":"من يركّز أكثر؟","Your name":"اسمك","For example Gasim":"مثلًا قاسم","Join the leaderboard":"انضم للوحة المتصدّرين","Everyone who uses Focus, ranked by focus time. Only your name and your daily focus minutes are shown, nothing else. Type the same name on all your devices and they add up as one.":"كل مستخدمي Focus مرتّبين حسب وقت التركيز. يظهر اسمك ودقائق تركيزك اليومية فقط، لا شيء غيرها. اكتب الاسم نفسه على كل أجهزتك لتُجمع كشخص واحد.","This week":"هذا الأسبوع","This month":"هذا الشهر","Range":"المدى","You":"أنت","you":"أنت","Same name on each of your devices":"الاسم نفسه على كل أجهزتك","Everyone using Focus can see this board. Same name = same person, so pick one nobody else uses.":"كل مستخدمي Focus يرون هذه اللوحة. الاسم نفسه = الشخص نفسه، فاختر اسمًا لا يستخدمه غيرك.","Leave the leaderboard":"غادر لوحة المتصدّرين","Tap again to leave":"اضغط مجددًا للمغادرة","no streak":"لا سلسلة","Loading the board…":"جارٍ تحميل اللوحة…","Can’t reach the board. Check your internet.":"تعذّر الوصول للوحة. تحقّق من الإنترنت.","Just you so far. Tell your friend to join with his name.":"أنت وحدك حتى الآن. اطلب من صديقك الانضمام باسمه.","Type your name first":"اكتب اسمك أولًا","The leaderboard isn’t connected yet":"لوحة المتصدّرين غير متصلة بعد","Needs one permission first":"يحتاج إذنًا واحدًا أولًا","Let Focus see your app time":"اسمح لـ Focus برؤية وقت تطبيقاتك","Tap":"اضغط",", tap":"، اضغط","in the list and tap it.":"في القائمة واضغط عليه.","Permit usage access":"السماح بالوصول للاستخدام",", then come back.":"، ثم عُد.","Your app time stays on this device. Focus only reads which apps were open and for how long.":"وقت تطبيقاتك يبقى على هذا الجهاز. يقرأ Focus فقط أي التطبيقات فُتحت وكم من الوقت.","Limits need Accessibility":"الحدود تحتاج إمكانية الوصول","Without it, Focus can't notice when you open an app whose time is up, so nothing gets blocked.":"بدونها لا يلاحظ Focus فتحك لتطبيق انتهى وقته، فلا يُحظر شيء.","Watching":"تحت المراقبة","Tap an app to give it a daily limit or open hours.":"اضغط على تطبيق لتضع له حدًا يوميًا أو ساعات فتح.","Add an app to watch":"أضف تطبيقًا للمراقبة","Everything else today":"كل ما سواها اليوم","Nothing else used today.":"لم يُستخدم شيء آخر اليوم.","Apps to watch":"تطبيقات للمراقبة","Search apps":"ابحث في التطبيقات","No app matches.":"لا تطبيق مطابق.","Watching ":"تحت المراقبة","Track only":"تتبّع فقط","No limits and nothing blocked, just the numbers":"بلا حدود ولا حظر، الأرقام فقط","When an app's time is up":"عندما ينتهي وقت تطبيق","Unlock 5 more minutes":"افتح 5 دقائق إضافية","What it takes to get a little more time":"ما يلزم للحصول على وقت إضافي قليل","Not allowed":"غير مسموح","Wait 30 s":"انتظر 30 ث","Type a sentence":"اكتب جملة","Emergency unlocks":"فتح الطوارئ","15 minutes, no questions, a few per week":"15 دقيقة دون أسئلة، مرات قليلة في الأسبوع","1 a week":"1 أسبوعيًا","Break before reopening":"استراحة قبل إعادة الفتح","After you leave a limited app, it stays closed for a while":"بعد مغادرتك تطبيقًا محدودًا يبقى مغلقًا لفترة","Delay before loosening":"تأخير قبل التخفيف","Turning limits down or off only takes effect after this":"تخفيف الحدود أو إيقافها لا يسري إلا بعد هذا","Shrink limits every week":"صغّر الحدود كل أسبوع","Each limit gets a little smaller every 7 days, never below 10 minutes":"يصغر كل حد قليلًا كل 7 أيام، ولا يقل عن 10 دقائق","Quiet times":"أوقات الهدوء","Closes every app you watch.":"يغلق كل تطبيق تراقبه.","Bedtime":"وقت النوم","Watched apps stay closed overnight":"تبقى التطبيقات المراقبة مغلقة ليلًا","Bedtime starts":"يبدأ وقت النوم","Bedtime ends":"ينتهي وقت النوم","to":"إلى","Websites":"المواقع","Closed in every browser, so the app (with its limits) is the only way in.":"مغلقة في كل متصفح، فيبقى التطبيق (بحدوده) الطريق الوحيد.","Block Facebook website":"احظر موقع فيسبوك","Block Instagram website":"احظر موقع إنستغرام","Block TikTok website":"احظر موقع تيك توك","Gray screen":"شاشة رمادية","One-time setup from your laptop":"إعداد لمرة واحدة من حاسوبك","On the phone:":"على الهاتف:","Settings → About phone":"الإعدادات ← حول الهاتف","7 times. Then in":"7 مرات. ثم في","OS version":"إصدار النظام","Additional settings → Developer options":"إعدادات إضافية ← خيارات المطوّر","USB debugging":"تصحيح USB","and":"و","USB debugging (Security settings)":"تصحيح USB (إعدادات الأمان)","Plug the phone into the laptop and allow it when the phone asks.":"صِل الهاتف بالحاسوب واسمح عندما يسأل الهاتف.","On the laptop, double-click":"على الحاسوب، انقر مرتين على","Gray screen setup":"إعداد الشاشة الرمادية","in the Focus folder on your Desktop.":"في مجلد Focus على سطح المكتب.","Android only lets a computer give this permission. You can turn USB debugging off again afterwards.":"أندرويد لا يمنح هذا الإذن إلا من حاسوب. يمكنك إيقاف تصحيح USB بعدها.","At bedtime":"وقت النوم","The apps you watch turn black and white":"تصبح التطبيقات التي تراقبها بالأبيض والأسود","Gray starts":"يبدأ الرمادي","Gray ends":"ينتهي الرمادي","After half a limit":"بعد نصف الحد","Gray while you're in an app that has used half its time today":"رمادي أثناء استخدامك تطبيقًا استهلك نصف وقته اليوم","Gray screen at bedtime":"شاشة رمادية وقت النوم","Gray screen after half a limit":"شاشة رمادية بعد نصف الحد","Reports":"التقارير","Nightly summary":"الملخص الليلي","One quiet notification: today's time, limits kept, time saved":"إشعار هادئ واحد: وقت اليوم، والحدود الملتزم بها، والوقت الموفّر","At":"الساعة","Summary time":"وقت الملخص","Prayer":"الصلاة","Prayer reminder":"تذكير الصلاة","At each adhan, the apps you watch stop until you tap “I understand”":"عند كل أذان تتوقف التطبيقات التي تراقبها حتى تضغط «فهمت»","Not matching your mosque? Change a time and Focus keeps that difference every day.":"لا يطابق مسجدك؟ غيّر الوقت وسيحفظ Focus الفرق كل يوم.","Use my location":"استخدم موقعي","Update my location":"حدّث موقعي","Calculated":"محسوب","That is over 2 hours from the calculated time":"هذا يبعد أكثر من ساعتين عن الوقت المحسوب","Daily limit":"الحد اليومي","When the time is up, the app shows a block screen until tomorrow.":"عند انتهاء الوقت يُظهر التطبيق شاشة حظر حتى الغد.","No limit":"بلا حد","Open only at":"يُفتح فقط في","Outside these hours the app stays closed. No hours set means any time.":"خارج هذه الساعات يبقى التطبيق مغلقًا. بلا ساعات يعني أي وقت.","Add hours":"أضف ساعات","Opens":"يفتح","Closes":"يغلق","Remove these hours":"احذف هذه الساعات","saved in the last 7 days, against your usual use":"وفّرتها في آخر 7 أيام مقارنة باستخدامك المعتاد","Time saved shows once Focus knows your usual use":"يظهر الوقت الموفّر بعدما يعرف Focus استخدامك المعتاد","in a row inside all your limits":"متتالية ضمن كل حدودك","Set a limit to start a streak":"ضع حدًا لتبدأ سلسلة","On all apps · pick the ones to watch":"على كل التطبيقات · اختر ما تراقبه","time's up":"انتهى الوقت"};
+    const PAT = [[/^Today (\S.*?) · (\d+) days? streak$/,"اليوم $1 · سلسلة $2 يوم"],[/^Today (\d+) counted · (\d+) sessions?$/,"اليوم $1 عدّة · $2 جلسة"],[/^Today ([\dhm ]+)$/,"اليوم $1"],[/^([\dhm ]+) focused$/,"$1 تركيز"],[/^([\dhm ]+) watched$/,"$1 مراقَب"],[/^([\dhm ]+) today$/,"$1 اليوم"],[/^Today · (\d+) opens? · ([\dhm ]+) on all apps$/,"اليوم · $1 فتح · $2 على كل التطبيقات"],[/^([\dhm ]+) of ([\dhm ]+) · time's up · (\d+) opens?(.*)$/,"$1 من $2 · انتهى الوقت · $3 فتح$4"],[/^([\dhm ]+) of ([\dhm ]+) · (\d+) opens?(.*)$/,"$1 من $2 · $3 فتح$4"],[/^([\dhm ]+) · (\d+) opens?(.*)$/,"$1 · $2 فتح$3"],[/^(\d+) days? in a row$/,"$1 يوم متتالٍ"],[/^(\d+) days?$/,"$1 يوم"],[/^(\d+) min$/,"$1 د"],[/^(\d+) min counted$/,"$1 د محسوبة"],[/^Your looser settings take effect at (.+)\.$/,"تسري إعداداتك الأخف الساعة $1."],[/^Updated (.+)$/,"آخر تحديث $1"],[/^Offline · last updated (.+)$/,"دون اتصال · آخر تحديث $1"],[/^Last 7 days: (.+?), (.+?) less than the week before(.*)\.$/,"آخر 7 أيام: $1، أقل بـ $2 من الأسبوع الذي قبله$3."],[/^Last 7 days: (.+?), (.+?) more than the week before(.*)\.$/,"آخر 7 أيام: $1، أكثر بـ $2 من الأسبوع الذي قبله$3."],[/^Last 7 days: (.+?), the same as the week before\.$/,"آخر 7 أيام: $1، مثل الأسبوع الذي قبله."],[/^Last 7 days: (.+?) on watched apps\.$/,"آخر 7 أيام: $1 على التطبيقات المراقبة."],[/^After weekly shrinking, it is (.+) a day now\.$/,"بعد التصغير الأسبوعي أصبح $1 يوميًا."],[/^Yours · ([+−]\d+) min$/,"وقتك · $1 د"],[/^Your location, near (.+)$/,"موقعك، قرب $1"],[/^(.+) \(from your time zone; allow location for exact times\)$/,"$1 (حسب منطقتك الزمنية؛ اسمح بالموقع لأوقات أدق)"],[/^(?:Fajr|Dhuhr|Asr|Maghrib|Isha) · (.+)$/,"$1"],[/^(\d+) photos downloaded\. They work offline now\.$/,"نُزّلت $1 صور. تعمل الآن دون إنترنت."],[/^Session complete · (.+)$/,"اكتملت الجلسة · $1"],[/^Goal (.+) reached · total (.+)$/,"بلغت الهدف $1 · المجموع $2"],[/^Backup saved as (.+)$/,"حُفظت النسخة باسم $1"],[/^of (.+)$/,"من $1"],[/^(\d+) devices linked · one live timer$/,"$1 أجهزة مربوطة · مؤقّت واحد مباشر"],[/^Works once, for (\d+:\d\d) more$/,"يعمل مرة واحدة، لمدة $1 أخرى"],[/^Seen (\d+) min ago$/,"قبل $1 د"],[/^Ends at (\d+:\d\d) am$/,"ينتهي $1 ص"],[/^Ends at (\d+:\d\d) pm$/,"ينتهي $1 م"],[/^Seen (\d+) h ago$/,"قبل $1 س"],[/^Seen (\d+) days ago$/,"قبل $1 يوم"]];
     const MON = { Jan: 'يناير', Feb: 'فبراير', Mar: 'مارس', Apr: 'أبريل', May: 'مايو', Jun: 'يونيو', Jul: 'يوليو', Aug: 'أغسطس', Sep: 'سبتمبر', Oct: 'أكتوبر', Nov: 'نوفمبر', Dec: 'ديسمبر' };
     const WD = { Sun: 'الأحد', Mon: 'الاثنين', Tue: 'الثلاثاء', Wed: 'الأربعاء', Thu: 'الخميس', Fri: 'الجمعة', Sat: 'السبت' };
     const dates = s => s.replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, m => MON[m]).replace(/\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat),/g, (m, d) => WD[d] + '،');

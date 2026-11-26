@@ -1,5 +1,13 @@
 # Changelog
 
+## Web — pause, cleaner controls, no text selection
+- Pause: tap the big circle to pause or go on (follows on linked devices); hold it to end. When time is up it turns into a check.
+- −5 and +5 are small circles beside it; the big one takes your label's colour. Thinner ring, lighter clock.
+- "Ends at 3:45 pm" under the countdown.
+- Dhikr: a light buzz at every hundred. A long hold counts once, like a tap.
+- A long press anywhere selects no text and opens no menu (typing fields still work).
+- Deeper, even veil over the photo behind Deep focus.
+
 ## Web — one app on all your devices
 - A running sit counts in Today and the total minute by minute, the same on every linked device.
 - Leaderboard › You lists your linked devices with when each was last open; remove ones you don't use.
