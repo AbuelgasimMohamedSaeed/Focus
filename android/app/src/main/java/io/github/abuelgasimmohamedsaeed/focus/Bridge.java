@@ -73,6 +73,12 @@ final class Bridge {
         L.set(app, lang);
     }
 
+    /** Saves a background photo to Pictures › Focus. urls: the addresses to try, one per line. */
+    @JavascriptInterface
+    public void savePhoto(String urls, String name) {
+        new Thread(() -> Photos.save(app, urls.split("\n"), name)).start();
+    }
+
     @JavascriptInterface
     public String version() {
         return activity.versionName();

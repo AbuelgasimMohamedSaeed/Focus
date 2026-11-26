@@ -1,5 +1,11 @@
 # Changelog
 
+## Web + Android — photos that fit each screen, holy places, save in HD
+- Each device shows only background photos in its own shape: tall on the phone, wide on the laptop, the tablet as you hold it (it switches when you turn it). New photos are fetched in that shape.
+- The Islamic topic now brings Masjid al-Haram and the Kaaba, the Prophet's Mosque in Medina, and Al-Aqsa with the Dome of the Rock, mixed with other mosques.
+- "Save photo in HD" in Background: the phone saves to Pictures › Focus (gallery), the laptop to Downloads. Needs the new Android app version (it updates itself).
+- Fix: older saved photos used picture sizes Wikimedia no longer serves; they're moved to working sizes.
+
 ## Web — pause, cleaner controls, no text selection
 - Pause: tap the big circle to pause or go on (follows on linked devices); hold it to end. When time is up it turns into a check.
 - −5 and +5 are small circles beside it; the big one takes your label's colour. Thinner ring, lighter clock.
